@@ -1,2 +1,3 @@
 data/mnist
 .ipynb_checkpoints/
+*.pyc
