@@ -136,6 +136,9 @@ class Prediction:
     
     def max_en(self):
         return np.argmax(self.pred_en)
+
+    def candidate(self):
+        return get_candidate(self)
     
 def get_candidate(pred):
     if pred.invalid_en and pred.invalid_ko:
