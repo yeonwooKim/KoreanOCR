@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="SNU PROJECT Korean OCR">
+        <meta name="author" content="snuproject">
+
+        <title>Korean OCR</title>
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        
+        <!-- Google fonts -->
+        <link href='http://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+        <link href='http://fonts.googleapis.com/earlyaccess/nanumgothic.css' rel='stylesheet' type='text/css'>
+        <style>
+            .main {
+                min-height: 300px;
+            }
+            #upload {
+                max-width: 400px;
+            }
+        </style>
+    </head>
+
+    <body role="document">
+        <div class="navbar navbar-inverse" role="navigation">
+            <div class="container">
+                <div class="navbar-header">
+                    <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                    <a class="navbar-brand" href="/">Korean OCR</a>
+                </div>
+                <div class="collapse navbar-collapse">
+                    <ul class="nav navbar-nav">
+                    <li class = "active"><a href="/">Home</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+		
+		<div class="container main">
+            <div class="upload">
+                <button id="upload-btn" class="btn btn-default" type="button">Choose Image...</button>
+                <h2 id="upload-stat"></h2>
+            </div>
+            <div id="result" hidden>
+                <h2>Result</h2>
+                <pre id="result-text"></pre>
+            </div>
+		</div>
+		
+        <div class="footer">
+            <div class="container">
+                <p>Powered by Bootstrap</p>
+            </div>
+        </div>
+
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery.form/3.51/jquery.form.js"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+        <script>
+            var HiddenFileInput = function(args){
+                this.init = function(args) {
+                    this.$btn = args.$btn;
+                    this.action = args.action;
+                    this.method = (args.method) ? args.method : "post";
+                    this.accept = args.accept;
+                    this.param = (args.param) ? args.param : {};
+                    this.$body = (args.$body) ? args.$body : $('body');
+                    this.enctype = "multipart/form-data";
+                    this.$form = $("<form></form>");
+                    this.file_input_name = args.file_input_name;
+                    this.$file_input = $('<input type="file" name='+this.file_input_name+' '+
+                        'accept='+this.accept+' style="display:none"/>');
+                    this.$form.append(this.$file_input);
+                    this.$body.append(this.$form);
+                    this.fn_submit = args.fn_submit;
+                    this.fn_success = args.fn_success;
+                    this.fn_error = args.fn_error;
+                    if (!this.fn_submit) this.fn_submit = function(formData, jqForm, options) {
+                            formData.push(this.param);
+                            console.log(this.param);
+                            console.log(formData);
+                        }.bind(this);
+                    if (!this.fn_success) this.fn_success = function(response, status) {
+                            console.log("ok");
+                        }
+                    if (!this.fn_error) this.fn_error = function() {
+                            console.log('error');
+                        }
+
+                    this.reload();
+                    this.$form.ajaxForm({
+                        beforeSubmit : this.fn_submit,
+                        success: this.fn_success,
+                        error: this.fn_error
+                    });
+                    this.$btn.click(function() {
+                        this.$file_input.trigger('click');
+                    }.bind(this));
+                    this.$file_input.change(function() {
+                        this.$form.submit();
+                    }.bind(this));
+                };
+                this.reload = function() {
+                    this.$form.prop('action', this.action);
+                    this.$form.prop('method', this.method);
+                    this.$form.prop('accept', this.accept);
+                    this.$form.prop('enctype', this.enctype);
+                };
+                this.init(args);
+            };
+
+            var $uploadstat = $("#upload-stat")
+            var imageInput = new HiddenFileInput({
+                action : "/upload",
+                accept : "image/*",
+                param : {},
+                file_input_name : "image",
+                $btn : $("#upload-btn"),
+                fn_submit : function (formData, jqForm, options) {
+                    $uploadstat.text("Analyzing...");
+                    $("#result").hide();
+                },
+                fn_success : function (response, status) {
+                    $uploadstat.text("Success");
+                    $("#result").show();
+                    $("#result-text").text(response);
+                },
+                fn_error : function () {
+                    $uploadstat.text("Error. Try again");
+                }
+            });
+        </script>
+    </body>
+</html>
