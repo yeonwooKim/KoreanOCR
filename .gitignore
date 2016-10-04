@@ -1,3 +1,5 @@
 data/mnist
+data/en
+data/ko
 .ipynb_checkpoints/
 *.pyc
