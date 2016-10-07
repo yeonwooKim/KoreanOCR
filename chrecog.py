@@ -1,3 +1,6 @@
+# chrecog.py
+# 32 X 32 numpy array를 받아
+# 확률을 출력
 import tensorflow as tf
 import numpy as np
 from hangul_utils import join_jamos_char
