@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 
 # get img and change it to grayscale
-original_img = cv2.imread('test.png')
+original_img = cv2.imread('test/test.png')
 grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 
 # change img to black & white
@@ -12,11 +12,19 @@ grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 (x, y) = im_bw.shape
 
 # sums up the column pixel value of a given row in an image
-def sumup_column(row):
+def sumup_column(img, row_number):
 	sum = 0
-	for i in row:
-		sum = sum + i
-	return sum / row.size
+	(_, length) = img.shape
+	for i in range(0, length):
+		sum = sum + img.item(row_number, i)
+	return sum / length
+
+def sumup_row(img, col_number):
+	sum = 0
+	(length, _) = img.shape
+	for i in range(0, length):
+		sum = sum + img.item(i, col_number)
+	return sum / length
 
 # finds the lines that contain text and
 # return them as a list of tuples that indicate the location of starting and ending pt of each line
@@ -25,7 +33,7 @@ def find_line(img):
 	trunc_row = []
 	(row, _) = img.shape
 	for i in range (0, row):
-		sum = sumup_column(img[i])
+		sum = sumup_column(img, i)
 		if sum > 0 and start_idx == -1:
 			start_idx = i
 		elif (sum == 0 and start_idx == -1) or sum > 0:
@@ -46,13 +54,34 @@ def find_line(img):
 
 	return trunc_row
 
+def trim_line(img):
+	(x, y) = img.shape
+	fst, lst = -1, -1
+	for i in range (0, y):
+		sum = sumup_row(img, i)
+		if sum > 0:
+			fst = i
+			break
+	for i in range (0, y):
+		sum = sumup_row(img, y - 1 - i)
+		if sum > 0:
+			lst = y - 1 - i
+			break
+	if fst < 10 and lst >= y - 10:
+		return img
+	elif fst < 10:
+		return img[0:x, 0:lst + 10]
+	elif lst >= y - 10:
+		return img[0:x, fst - 10:y]
+	return img[0:x, fst - 10:lst + 10]
+
 # truncates the imgs to line imgs
 # returns list of img objects
 def get_line_imgs(img, trunc_row):
 	line_imgs = []
 	l = len(trunc_row)
 	for i in range (0, l):
-		line_imgs.append(img[trunc_row[i][0]:trunc_row[i][1]]) 
+		line_imgs.append(trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
 	return line_imgs
 
 cnt = 0
