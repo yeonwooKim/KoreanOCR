@@ -19,6 +19,7 @@ def sumup_column(img, row_number):
 		sum = sum + img.item(row_number, i)
 	return sum / length
 
+# sums up the row pixel value of a given column in an image
 def sumup_row(img, col_number):
 	sum = 0
 	(length, _) = img.shape
@@ -54,6 +55,19 @@ def find_line(img):
 
 	return trunc_row
 
+def label_location(trunc_row):
+	label, num_p, num_l = [], 0, 0
+	length = len(trunc_row)
+	for i in range (0, length - 1):
+		label.append((num_p, num_l))
+		num_l = num_l + 1
+		if trunc_row[i + 1][0] - trunc_row[i][1] > 20:
+			num_p = num_p + 1
+			num_l = 0
+	label.append((num_p, num_l))
+	return label
+
+# trims line images
 def trim_line(img):
 	(x, y) = img.shape
 	fst, lst = -1, -1
@@ -84,9 +98,12 @@ def get_line_imgs(img, trunc_row):
 		line_imgs.append(trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
 	return line_imgs
 
-cnt = 0
-for i in get_line_imgs(im_bw, find_line(im_bw)):
-	name = "line" + str(cnt) + ".png"
-	cnt = cnt + 1
-	cv2.imwrite(name, i)
+def save_line_imgs(img, trunc_row):
+	length = len (trunc_row)
+	label = label_location(trunc_row)
+	imgs = get_line_imgs(img, trunc_row)
+	for i in range (0, length):
+		name = "test/paragraph" + str(label[i][0]) + "line" + str(label[i][1]) + ".png"
+		cv2.imwrite(name, imgs[i])
 
+save_line_imgs(im_bw, find_line(im_bw))
