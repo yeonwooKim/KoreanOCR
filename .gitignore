@@ -3,5 +3,4 @@ data/en
 data/ko
 .ipynb_checkpoints/
 *.pyc
-Detection/test/
 **/.DS_Store
