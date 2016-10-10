@@ -2,16 +2,13 @@
 # numpy array로 변환된 이미지를 받아
 # 전처리를 수행
 import numpy as np
-
-# RGB 이미지를 흑백 이미지로 변환
-def rgb2gray(rgb):
-    if len(rgb.shape) is 3:
-        return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
-    else:
-        print ("Not RGB!")
-        return rgb
+import cv2
 
 # app.py에서 호출
 # 전처리가 완료된 numpy array를 반환
 def process(img):
-    return rgb2gray(img)
+    if len(img.shape) > 2 :
+        grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else :
+        grayscale_img = img
+    return cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]

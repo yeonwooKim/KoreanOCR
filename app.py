@@ -3,7 +3,9 @@
 # templates 폴더에 프론트엔드 구현이 되어있음
 
 from flask import Flask, render_template, request
-from scipy.ndimage import imread
+import cv2
+import numpy as np
+
 import preproc
 import detection
 import chrecog
@@ -47,9 +49,10 @@ def view_index():
 @app.route('/upload', methods=['POST'])
 def view_upload():
     f = request.files['image']
-    size = len(f.read())
-    f.seek(0) # 사이즈 분석을 위해 버퍼를 모두 읽었으므로 초기화
-    img = imread(f) # 이미지를 디코드 후 numpy array로 변환
+    blob = f.read()
+    size = len(blob)
+    blob_array = np.asarray(bytearray(blob), dtype=np.uint8)
+    img = cv2.imdecode(blob_array, 0) # 이미지를 디코드 후 numpy array로 변환
     analyzed = analysis(img)
     ret = ( "name : %s\n" % f.filename +
             "size : %s\n" % sizeof_fmt(size) +
