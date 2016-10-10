@@ -1,11 +1,11 @@
 from enum import Enum
 
 class Paragraph:
-    def __init__(self, lines=[]]):
+    def __init__(self, lines):
         self.lines = lines
 
 class Line:
-    def __init__(self, chars=[]]):
+    def __init__(self, chars):
         self.chars = chars
 
 class CHARTYPE(Enum):

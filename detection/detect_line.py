@@ -1,7 +1,7 @@
 from __future__ import division
 import cv2
 import numpy as np
-from util import *
+from detection.util import *
 
 # finds the lines that contain text and
 # return them as a list of tuples that indicate the location of starting and ending pt of each line
@@ -78,13 +78,14 @@ def get_line_imgs(img, trunc_row):
 # [paragraph_1, paragraph_2, ...]
 # paragraph_n = [line_1, line_2, ...]
 # line_n = line img
-def output_line_imgs(img, trunc_row):
+def output_line_imgs(img):
 	essay = []
-	length = len (trunc_row)
+	trunc_row = find_line(img)
+	length = len(trunc_row)
 	(num_p, label) = label_paragraph(trunc_row)
 	for i in range (0, num_p):
 		essay.append([])
-	imgs = get_line_imgs(img, trunc_row)	
+	imgs = get_line_imgs(img, trunc_row)
 	for i in range (0, length):
 		essay[label[i]].append(imgs[i])
 	return essay

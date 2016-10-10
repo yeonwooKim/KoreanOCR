@@ -60,4 +60,4 @@ def view_upload():
 # 웹서버를 통하지 않고
 # python 인터프리터로 바로 실행되었을 때
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)

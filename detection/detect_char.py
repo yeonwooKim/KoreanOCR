@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from util import *
+from detection.util import *
 
 # returns all the candidate letter points as a list of pairs and max width of letter
 def fst_pass(line):
@@ -75,7 +75,18 @@ def snd_pass(line, max, candidate):
 		snd_candidate.append(snd_word)
 		snd_word = []
 	return snd_candidate
-		
+
+def trunc_letter(line, candidate):
+	letters = []
+	(x, y) = line.shape
+	for word in candidate:
+		for letter in word:
+			letters.append(line[0:x,letter[0]:letter[1]])
+	return letters
+
+def get_letters_from_line(img):
+	fst = fst_pass(img)
+	return trunc_letter(img, snd_pass(img, fst[0], fst[1]))
 
 # implemented for testing; truncates line image to letters and saves letter images
 # with word and letter information

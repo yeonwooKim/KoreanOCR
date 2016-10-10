@@ -1,13 +1,37 @@
-import detect_char
-import detect_line
+import numpy as np
+from scipy.misc import imresize
+from detection.detect_char import get_letters_from_line
+from detection.detect_line import output_line_imgs
+from detection.util import *
 
-# reconst 모듈로 넘겨줄 paragraph list를 생성
-# 아래 구현은 이미지에서 왼쪽 상단 192 X 64 부분을 잘라
-# 12개 char로 만들어 넘겨주는 임시 구현
+def reshape_with_margin(img, size=32, pad=1):
+    if img.shape[0] > img.shape[1] :
+        dim = img.shape[0]
+        margin = (dim - img.shape[1])//2
+        margin_img = np.zeros([dim, margin])
+        reshaped = np.c_[margin_img, img, margin_img]
+    else :
+        dim = img.shape[1]
+        margin = (dim - img.shape[0])//2
+        margin_img = np.zeros([margin, dim])
+        reshaped = np.r_[margin_img, img, margin_img]
+    reshaped = imresize(reshaped, [size-pad*2, size-pad*2])
+    padded = np.zeros([size, size])
+    padded[pad:-pad, pad:-pad] = reshaped
+    return padded
+
+# return [Paragraph]
 def get_graphs(img):
-    chars = [Char(imresize(img[0:32, 0+i*32:i*32+32], [32, 32])) for i in range(0, 6)]
-    l1 = Line(chars)
-    chars = [Char(imresize(img[32:64, 0+i*32:i*32+32], [32, 32])) for i in range(0, 6)]
-    l2 = Line(chars)
-    p = Paragraph([l1, l2])
-    return [p]
+    essay = output_line_imgs(img)
+    ret = []
+    for lineimgs in essay:
+        p = Paragraph([])
+        for lineimg in lineimgs:
+            charimgs = get_letters_from_line(lineimg)
+            chars = []
+            for charimg in charimgs:
+                chars.append(Char(reshape_with_margin(charimg)))
+            l = Line(chars)
+            p.lines.append(l)
+        ret.append(p)
+    return ret
