@@ -26,7 +26,7 @@ def sizeof_fmt(num, suffix='B'):
 # 분석된 최종 문자열을 반환
 def analysis(img):
     processed = preproc.process(img)
-    graphs = detect.get_graphs(processed)
+    graphs = detection.get_graphs(processed)
     # TODO: do this in batch, not pred_one
     for p in graphs:
         for l in p.lines:
