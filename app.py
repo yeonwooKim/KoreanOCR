@@ -5,7 +5,7 @@
 from flask import Flask, render_template, request
 from scipy.ndimage import imread
 import preproc
-import detect
+import detection
 import chrecog
 chrecog.load_ckpt("data/only_valid_160930.ckpt")
 import reconst
