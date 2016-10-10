@@ -1,14 +1,6 @@
 import cv2
 import numpy as np
-from enum import Enum
-
-# sums up the row pixel value of a given column in an image
-def sumup_row(img, col_number):
-	sum = 0
-	(length, _) = img.shape
-	for i in range (0, length):
-		sum = sum + img.item(i, col_number)
-	return sum / length
+from util import *
 
 # returns all the candidate letter points as a list of pairs and max width of letter
 def fst_pass(line):
