@@ -20,15 +20,17 @@ ko_chset_jung = ["ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", 
 ko_chset_jong = ["X", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"]
 
 # Read training and test images from file
-def get_image_index_from_file(indexf, dataf):
+def get_image_index_from_file(data_path):
     index_data = []
-    with gzip.open(indexf, 'rt') as arc:
-        index_data.extend(json.load(arc))
-        print("index loaded")
-        arc.close()
+    with tarfile.open(data_path, "r:*") as tar:
+        print("tar opened")
+        ft = tar.extractfile("index.json")
+        ft_str = io.TextIOWrapper(ft)
+        index_data.extend(json.load(ft_str))
+        tar.close()
 
     # Read-stream mode r|*
-    with tarfile.open(dataf, "r|*") as tar:
+    with tarfile.open(data_path, "r|*") as tar:
         print("tar opened")
         img_data = []
         for i, member in enumerate(index_data):
@@ -75,26 +77,7 @@ def get_label(index_data):
     print("label loaded")
     return label
 
-def getIndex(l, indexes):
-    return [l[i] for i in indexes]
-
-def shuffle(n, *lists):
-    perm = np.random.permutation(n)
-    lists = list(lists)
-    for i in range(len(lists)):
-        if hasattr(lists[i], "shape"):
-            lists[i] = lists[i][perm]
-        else:
-            lists[i] = getIndex(lists[i], perm)
-    print("shuffled")
-    return tuple(lists)
-
 def get_all():
-    index_data_en, img_en = get_image_index_from_file('data/en/index.json.gz', 'data/en/data.tar.gz')
-    index_data_ko, img_ko = get_image_index_from_file('data/ko/index.json.gz', 'data/ko/data.tar.gz')
-    index_data = index_data_en + index_data_ko
-    img = np.concatenate((img_en, img_ko))
-    del img_en
-    del img_ko
+    index_data, img = get_image_index_from_file('data/161018_noise.tgz')
     label = get_label(index_data)
-    return shuffle(img.shape[0], index_data, img, label)
+    return (index_data, img, label)
