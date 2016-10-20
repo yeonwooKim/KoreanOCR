@@ -40,6 +40,8 @@ def slice_label(tf_label, len_tuple):
 
 ################
 
+Y_size = len(ko_chset_cho)+len(ko_chset_jung)+len(ko_chset_jong)+len(en_chset)+4 
+
 tf.reset_default_graph()
 X = tf.placeholder(tf.float32, [None, 32, 32])
 keep_prob = tf.placeholder(tf.float32)
@@ -69,7 +71,7 @@ cnn_3_pool = max2d_pool(cnn_3_concat) # 4 * 4 * 192
 dense_1 = tf.nn.relu(build_nn(1024, flatten_cnn(cnn_3_pool), "dense_1"))
 dropout_1 = tf.nn.dropout(dense_1, keep_prob)
 
-logit = build_nn(160, dropout_1, "logit")
+logit = build_nn(Y_size, dropout_1, "logit")
 logit_cho, logit_jung, logit_jong, logit_en = slice_label(logit,
                                          (len(ko_chset_cho)+1,
                                          len(ko_chset_jung)+1,
