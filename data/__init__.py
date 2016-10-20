@@ -2,6 +2,7 @@ import json
 import gzip
 import tarfile
 import numpy as np
+import io
 from scipy.ndimage import imread
 from hangul_utils import check_syllable, split_syllable_char, split_syllables, join_jamos
 import random
@@ -13,7 +14,8 @@ en_chset.extend(["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m"
 en_chset.extend(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",\
               "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"])
 en_chset.extend(["(", ")", "'", "\"", ".", ",", ":", ";", "!", "?", "/", "@", "#", "$",\
-              "%", "^", "&", "*", "[", "]", "{", "}", "<", ">", "~", "-"])
+              "%", "^", "&", "*", "[", "]", "{", "}", "<", ">", "~", "-", "_", "「", "」", "『", "』",
+                "《", "》", "·"])
 
 ko_chset_cho = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"]
 ko_chset_jung = ["ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"]
@@ -23,7 +25,7 @@ ko_chset_jong = ["X", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "�
 def get_image_index_from_file(data_path):
     index_data = []
     with tarfile.open(data_path, "r:*") as tar:
-        print("tar opened")
+        print("tar opened for index")
         ft = tar.extractfile("index.json")
         ft_str = io.TextIOWrapper(ft)
         index_data.extend(json.load(ft_str))
@@ -31,7 +33,7 @@ def get_image_index_from_file(data_path):
 
     # Read-stream mode r|*
     with tarfile.open(data_path, "r|*") as tar:
-        print("tar opened")
+        print("tar opened for image")
         img_data = []
         for i, member in enumerate(index_data):
             if i%10000 == 1:
@@ -77,7 +79,7 @@ def get_label(index_data):
     print("label loaded")
     return label
 
-def get_all():
-    index_data, img = get_image_index_from_file('data/161018_noise.tgz')
+def get_all(path):
+    index_data, img = get_image_index_from_file(path)
     label = get_label(index_data)
     return (index_data, img, label)
