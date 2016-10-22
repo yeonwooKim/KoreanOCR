@@ -41,16 +41,8 @@ def find_line(img):
 			continue
 		elif sum == 0 and start_idx >= 0:
 			end_idx = i
-			if end_idx - start_idx >= 5:
-				if start_idx >= 2 and end_idx <= row - 3:
-					trunc_row.append((start_idx - 2, end_idx + 2))
-				elif start_idx >= 2:
-					trunc_row.append((start_idx - 2, end_idx))
-				elif end_idx <= row - 3:
-					trunc_row.append((start_idx, end_idx + 2))
-				else:
-					trunc_row.append((start_idx, end_idx))
-
+			if end_idx - start_idx >= 2:
+				trunc_row.append((start_idx, end_idx))
 			start_idx, end_dix = -1, -1
 
 	return trunc_row
