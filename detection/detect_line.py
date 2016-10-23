@@ -48,19 +48,6 @@ def find_line(img):
 
 	return trunc_row
 
-# Implemented for testing; returns list of paragraph and line #
-def label_location(trunc_row):
-	label, num_p, num_l = [], 0, 0
-	length = len(trunc_row)
-	for i in range (0, length - 1):
-		label.append((num_p, num_l))
-		num_l = num_l + 1
-		if trunc_row[i + 1][0] - trunc_row[i][1] > 20:
-			num_p = num_p + 1
-			num_l = 0
-	label.append((num_p, num_l))
-	return label
-
 # Returns pair of total number of paragraphs and 
 # list of labels containing paragraph #
 def label_paragraph(trunc_row):
