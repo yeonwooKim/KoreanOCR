@@ -1,6 +1,7 @@
 from __future__ import division
 import cv2
 import numpy as np
+from detection.util import *
 
 # Implemented for testing; get img and change it to grayscale
 #original_img = cv2.imread('test/line_testing/test2.png')
@@ -116,13 +117,48 @@ def save_line_imgs(img, trunc_row):
 # [paragraph_1, paragraph_2, ...]
 # paragraph_n = [line_1, line_2, ...]
 # line_n = line img
-def output_line_imgs(img, trunc_row):
+def output_line_imgs(img):
 	essay = []
-	length = len (trunc_row)
+	trunc_row = find_line(img)
+	length = len(trunc_row)
 	(num_p, label) = label_paragraph(trunc_row)
 	for i in range (0, num_p):
 		essay.append([])
-	imgs = get_line_imgs(img, trunc_row)	
+	imgs = get_line_imgs(img, trunc_row)
 	for i in range (0, length):
 		essay[label[i]].append(imgs[i])
 	return essay
+
+# implemented for testing; returns list of paragraph and line #
+def label_location(trunc_row):
+	label, num_p, num_l = [], 0, 0
+	length = len(trunc_row)
+	for i in range (0, length - 1):
+		label.append((num_p, num_l))
+		num_l = num_l + 1
+		if trunc_row[i + 1][0] - trunc_row[i][1] > 20:
+			num_p = num_p + 1
+			num_l = 0
+	label.append((num_p, num_l))
+	return label
+
+# implemented for testing; saves line images by paragraph and line number
+def save_line_imgs(img, trunc_row):
+	length = len(trunc_row)
+	label = label_location(trunc_row)
+	imgs = get_line_imgs(img, trunc_row)
+	for i in range (0, length):
+		name = "test/paragraph" + str(label[i][0]) + "line" + str(label[i][1]) + ".png"
+		cv2.imwrite(name, imgs[i])
+
+# If executed directly
+if __name__ == '__main__':
+	# get img and change it to grayscale
+	original_img = cv2.imread('test/test.png')
+	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+
+	# change img to black & white
+	(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+	(x, y) = im_bw.shape
+	save_line_imgs(im_bw, find_line(im_bw))

@@ -4,6 +4,7 @@ from enum import Enum
 import Detect_line as dl
 import statistics
 import math
+from detection.util import *
 
 original_img = cv2.imread('test/line_testing/test2.png')
 grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
@@ -218,5 +219,3 @@ def get_graphs(img):
 		para = to_paragraph(essay[i])
 		l.append(para)
 	return l
-
-save_essay(essay)
