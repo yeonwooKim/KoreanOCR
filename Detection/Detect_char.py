@@ -88,6 +88,24 @@ def calc_width(word):
 		width.append(i[1] - i[0])
 	return width
 
+def find_split_pts(index, num_letter, size, img):
+	(_, w) = img.shape
+	i = 0
+	pts = []
+	while num_letter != 0:
+		pt, m = -1, math.inf
+		for j in range (i + int(size), min(w, i + int(size) + 7)):
+			s = sumup_col(img, j)
+			if (s <= m):
+				pt = j
+				m = s
+		if pt == -1:
+			pt = w - 1
+		pts.append((index + i, index + pt))
+		i = pt
+		num_letter = num_letter - 1
+	return pts
+
 # Merges and splits letters considering the context
 # Return value:
 #		[ word1, word2, word3, ... , wordN ]
@@ -111,7 +129,17 @@ def snd_pass(line, size, candidate):
 			elif size - 2 <= width[i] < height:
 				snd_word.append(word[i])
 			elif width[i] >= height:
-				snd_word.append(word[i])
+				num_letter = width[i] // size
+				pts = find_split_pts(word[i][0], num_letter, size, line[0:, word[i][0]:word[i][1]])
+				l = len(pts)
+				for j in range (0, l):
+					snd_word.append(pts[j])
+					if j == l - 1:
+						if word[i][1] - pts[j][1] <= size - 2:
+							snd_word.append((pts[j][1], word[i + 1][1]))	
+							merged = 1
+						else:
+							snd_word.append((pts[j][1], word[i][1]))
 			else:
 				snd_word.append(word[i])
 		if merged == 0:
@@ -191,4 +219,4 @@ def get_graphs(img):
 		l.append(para)
 	return l
 
-#save_essay(essay)
+save_essay(essay)
