@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from enum import Enum
 import Detect_line as dl
+import statistics
+import math
 
 original_img = cv2.imread('test/line_testing/test2.png')
 grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
@@ -59,7 +61,7 @@ def fst_pass(line):
 	candidate = []
 	word = []
 	start_letter, end_letter = -1, -1
-	max = -1
+	wlist = []
 
 	(height, length) = line.shape
 	for i in range (0, length):
@@ -78,19 +80,17 @@ def fst_pass(line):
 		elif sum == 0:
 			end_letter = i
 			width = end_letter - start_letter
-			if width > max and height > width:
-				max = width
+			wlist.append(width)
 			word.append((start_letter, end_letter))
 			start_letter = -1
 
 	if start_letter != -1:
 		width = length - 1 - start_letter
-		if width > max and height > width:
-			max = width
+		wlist.append(width)
 		word.append((start_letter, length - 1))
 	if word != []:
 		candidate.append(word)
-	return (max, candidate)
+	return (statistics.median(wlist), candidate)
 
 # Calculates the difference of end and start pts of each letter, returns a list of widths
 def calc_width(word):
@@ -104,7 +104,7 @@ def calc_width(word):
 #		[ word1, word2, word3, ... , wordN ]
 # wordN ::= [ letter1, letter2, ... , letterN ]
 # letterN ::= ( starting index, ending index )
-def snd_pass(line, max, candidate):
+def snd_pass(line, size, candidate):
 	snd_candidate = []
 	(height, _) = line.shape
 	for word in candidate:
@@ -116,13 +116,12 @@ def snd_pass(line, max, candidate):
 			if merged == 1:
 				merged = 0
 				continue
-			if max - 7 <= word[i + 1][1] - word[i][0] < height and width[i] >= width[i + 1]:
+			if size - 5 <= word[i + 1][1] - word[i][0] < height and width[i] >= width[i + 1]:
 				snd_word.append((word[i][0], word[i + 1][1]))
 				merged = 1
-			elif max - 2 <= width[i] < height:
+			elif size - 2 <= width[i] < height:
 				snd_word.append(word[i])
-			elif width[i] > height:
-				# split word; not yet implemented
+			elif width[i] >= height:
 				snd_word.append(word[i])
 			else:
 				snd_word.append(word[i])
@@ -136,13 +135,13 @@ def snd_pass(line, max, candidate):
 def proc_paragraph(para):
 	fst_candidate = []
 	snd_candidate = []
-	letter_size = -1
+	wlist = []
 	for line in para:
 		(m, c) = fst_pass(line)
 		fst_candidate.append(c)
-		if letter_size < m:
-			letter_size = m
+		wlist.append(m)
 	l = len(para)
+	letter_size = statistics.median(wlist)
 	for i in range (0, l):
 		c = snd_pass(para[i], letter_size, fst_candidate[i])
 		snd_candidate.append(c)
