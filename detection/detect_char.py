@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from scipy.misc import imresize
 from detection.util import *
 
 # returns all the candidate letter points as a list of pairs and max width of letter
@@ -84,9 +85,31 @@ def trunc_letter(line, candidate):
 			letters.append(line[0:x,letter[0]:letter[1]])
 	return letters
 
+def reshape_with_margin(img, size=32, pad=1):
+	if img.shape[0] > img.shape[1] :
+		dim = img.shape[0]
+		margin = (dim - img.shape[1])//2
+		margin_img = np.zeros([dim, margin])
+		reshaped = np.c_[margin_img, img, margin_img]
+	else :
+		dim = img.shape[1]
+		margin = (dim - img.shape[0])//2
+		margin_img = np.zeros([margin, dim])
+		reshaped = np.r_[margin_img, img, margin_img]
+	reshaped = imresize(reshaped, [size-pad*2, size-pad*2])
+	padded = np.zeros([size, size])
+	padded[pad:-pad, pad:-pad] = reshaped
+	return padded
+
 def get_letters_from_line(img):
 	fst = fst_pass(img)
-	return trunc_letter(img, snd_pass(img, fst[0], fst[1]))
+	candidate = snd_pass(img, fst[0], fst[1])
+	chars = []
+	for word in candidate:
+		for letter in word:
+			chars.append(Char(reshape_with_margin(img[:,letter[0]:letter[1]])))
+		chars.append(Char(None, CHARTYPE.BLANK))
+	return chars
 
 # implemented for testing; truncates line image to letters and saves letter images
 # with word and letter information
