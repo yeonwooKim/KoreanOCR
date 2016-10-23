@@ -28,20 +28,9 @@ class CHARTYPE(Enum):
 # img는 32 X 32 numpy array여야 함
 # blank, 즉 띄어쓰기도 하나의 char로 간주하여 추가해주어야함
 class Char:
-    def __init__(self, img):
+    def __init__(self, img, type):
         self.img = img
-        self.type = CHARTYPE.CHAR
-
-# reconst 모듈로 넘겨줄 paragraph list를 생성
-# 아래 구현은 이미지에서 왼쪽 상단 192 X 64 부분을 잘라
-# 12개 char로 만들어 넘겨주는 임시 구현
-def get_graphs(img):
-    chars = [Char(imresize(img[0:32, 0+i*32:i*32+32], [32, 32])) for i in range(0, 6)]
-    l1 = Line(chars)
-    chars = [Char(imresize(img[32:64, 0+i*32:i*32+32], [32, 32])) for i in range(0, 6)]
-    l2 = Line(chars)
-    p = Paragraph([l1, l2])
-    return [p]
+        self.type = type
 
 # Sums up the column pixel value of a given column in an image
 def sumup_col(img, col_number):
@@ -169,4 +158,37 @@ def save_essay(essay):
 		for j in range (0, l2):
 			trunc_n_save_letter(i, j, essay[i][j], c[j])
 
-save_essay(essay)
+# Truncates line image to letters and constructs line classes
+# Resizes char images to 32 * 32
+def to_line(line, candidate):
+	l = []
+	length = len(candidate)
+	for i in range (0, length):
+		for letter in candidate[i]:
+			char = Char(cv2.resize(line[0:,letter[0]:letter[1]], (32, 32)), CHARTYPE.CHAR)
+			l.append(char)
+		if i != length - 1:
+			l.append(Char(None, CHARTYPE.BLANK))
+	return Line(l)
+
+# Given a paragraph image, constructs a paragraph class
+def to_paragraph(para):
+	l = []
+	c = proc_paragraph(para)
+	length = len(para)
+	for i in range (0, length):
+		line = to_line(para[i], c[i])	
+		l.append(line)
+	return Paragraph(l)
+
+# reconst 모듈로 넘겨줄 paragraph list를 생성
+def get_graphs(img):
+	essay = dl.output_line_imgs(img, dl.find_line(im_bw))
+	l = []
+	length = len(essay)
+	for i in range (0, length):
+		para = to_paragraph(essay[i])
+		l.append(para)
+	return l
+
+#save_essay(essay)
