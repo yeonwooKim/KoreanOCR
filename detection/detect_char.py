@@ -1,17 +1,16 @@
 import cv2
 import numpy as np
 from enum import Enum
-import Detect_line as dl
+import detect_line as dl
 import statistics
 import math
-from detection.util import *
 
-original_img = cv2.imread('test/line_testing/test2.png')
+original_img = cv2.imread('test/line_testing/test3.png')
 grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 (_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 (x, y) = im_bw.shape
 
-essay = dl.output_line_imgs(im_bw, dl.find_line(im_bw))
+essay = dl.output_line_imgs(im_bw)
 
 class Paragraph:
     def __init__(self, lines):
@@ -186,6 +185,8 @@ def save_essay(essay):
 		l2 = len(essay[i])
 		for j in range (0, l2):
 			trunc_n_save_letter(i, j, essay[i][j], c[j])
+
+save_essay(essay)
 
 # Truncates line image to letters and constructs line classes
 # Resizes char images to 32 * 32

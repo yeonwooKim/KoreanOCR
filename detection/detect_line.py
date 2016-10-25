@@ -1,7 +1,6 @@
 from __future__ import division
 import cv2
 import numpy as np
-from detection.util import *
 
 # Implemented for testing; get img and change it to grayscale
 #original_img = cv2.imread('test/line_testing/test2.png')
@@ -44,7 +43,7 @@ def find_line(img):
 			end_idx = i
 			if end_idx - start_idx >= 2:
 				trunc_row.append((start_idx, end_idx))
-			start_idx, end_dix = -1, -1
+			start_idx, end_idx = -1, -1
 
 	return trunc_row
 
@@ -55,7 +54,7 @@ def label_paragraph(trunc_row):
 	length = len(trunc_row)
 	for i in range (0, length - 1):
 		label.append(num)
-		if trunc_row[i + 1][0] - trunc_row[i][1] > 20:
+		if trunc_row[i + 1][0] - trunc_row[i][1] > 10:
 			num = num + 1
 	label.append(num)
 	return (num + 1, label)
