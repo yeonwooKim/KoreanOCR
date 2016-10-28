@@ -21,7 +21,7 @@ class Char:
         self.type = type
 
 # sums up the column pixel value of a given row in an image
-def sumup_column(img, row_number):
+def sumup_row(img, row_number):
     sum = 0
     (_, length) = img.shape
     for i in range (0, length):
@@ -29,7 +29,7 @@ def sumup_column(img, row_number):
     return sum / length
 
 # sums up the row pixel value of a given column in an image
-def sumup_row(img, col_number):
+def sumup_col(img, col_number):
     sum = 0
     (length, _) = img.shape
     for i in range (0, length):

@@ -3,30 +3,31 @@ import cv2
 import numpy as np
 from detection.util import *
 
-# Implemented for testing; get img and change it to grayscale
-#original_img = cv2.imread('test/line_testing/test2.png')
-#grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+if __name__ == '__main__':
+	# Implemented for testing; get img and change it to grayscale
+	#original_img = cv2.imread('test/line_testing/test2.png')
+	#grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 
-# Implemented for testing; change img to black & white
-#(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+	# Implemented for testing; change img to black & white
+	#(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-#(x, y) = im_bw.shape
+	#(x, y) = im_bw.shape
 
-# Sums up the row pixel value of a given row in an image
-def sumup_row(img, row_number):
-	sum = 0
-	(_, length) = img.shape
-	for i in range (0, length):
-		sum = sum + img.item(row_number, i)
-	return sum / length
+	# Sums up the row pixel value of a given row in an image
+	def sumup_row(img, row_number):
+		sum = 0
+		(_, length) = img.shape
+		for i in range (0, length):
+			sum = sum + img.item(row_number, i)
+		return sum / length
 
-# Sums up the column pixel value of a given column in an image
-def sumup_col(img, col_number):
-	sum = 0
-	(length, _) = img.shape
-	for i in range (0, length):
-		sum = sum + img.item(i, col_number)
-	return sum / length
+	# Sums up the column pixel value of a given column in an image
+	def sumup_col(img, col_number):
+		sum = 0
+		(length, _) = img.shape
+		for i in range (0, length):
+			sum = sum + img.item(i, col_number)
+		return sum / length
 
 # Finds the lines that contain text and
 # Return them as a list of tuples that indicate the location of starting and ending pt of each line

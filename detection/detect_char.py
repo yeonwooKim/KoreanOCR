@@ -1,45 +1,47 @@
 import cv2
 import numpy as np
-from enum import Enum
-import Detect_line as dl
+import detection.detect_line as dl
 import statistics
 import math
 from detection.util import *
 
-original_img = cv2.imread('test/line_testing/test2.png')
-grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
-(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-(x, y) = im_bw.shape
+# If executed directly
+if __name__ == '__main__':
+	from enum import Enum
+	original_img = cv2.imread('test/line_testing/test2.png')
+	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+	(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+	(x, y) = im_bw.shape
 
-essay = dl.output_line_imgs(im_bw, dl.find_line(im_bw))
+	essay = dl.output_line_imgs(im_bw, dl.find_line(im_bw))
 
-class Paragraph:
-    def __init__(self, lines):
-        self.lines = lines
+	class Paragraph:
+		def __init__(self, lines):
+			self.lines = lines
 
-class Line:
-    def __init__(self, chars):
-        self.chars = chars
+	class Line:
+		def __init__(self, chars):
+			self.chars = chars
 
-class CHARTYPE(Enum):
-    CHAR = 0
-    BLANK = 1
+	class CHARTYPE(Enum):
+		CHAR = 0
+		BLANK = 1
 
-# 각 문자의 정보를 담고 있음
-# img는 32 X 32 numpy array여야 함
-# blank, 즉 띄어쓰기도 하나의 char로 간주하여 추가해주어야함
-class Char:
-    def __init__(self, img, type):
-        self.img = img
-        self.type = type
+	# 각 문자의 정보를 담고 있음
+	# img는 32 X 32 numpy array여야 함
+	# blank, 즉 띄어쓰기도 하나의 char로 간주하여 추가해주어야함
+	class Char:
+		def __init__(self, img, type):
+			self.img = img
+			self.type = type
 
-# Sums up the column pixel value of a given column in an image
-def sumup_col(img, col_number):
-	sum = 0
-	(length, _) = img.shape
-	for i in range (0, length):
-		sum = sum + img.item(i, col_number)
-	return sum / length
+	# Sums up the column pixel value of a given column in an image
+	def sumup_col(img, col_number):
+		sum = 0
+		(length, _) = img.shape
+		for i in range (0, length):
+			sum = sum + img.item(i, col_number)
+		return sum / length
 
 # Returns all the candidate letter points as a list of pairs and max width of letter
 # Return value:
@@ -151,7 +153,7 @@ def snd_pass(line, size, candidate):
 
 # Reshape narrow letters to 32 X 32
 # without modifying ratio
-def reshape_with_margin(img, size=32, pad=1):
+def reshape_with_margin(img, size=32, pad=3):
 	if img.shape[0] > img.shape[1] :
 		dim = img.shape[0]
 		margin = (dim - img.shape[1])//2
@@ -212,7 +214,8 @@ def to_line(line, candidate):
 	length = len(candidate)
 	for i in range (0, length):
 		for letter in candidate[i]:
-			char = Char(reshape_with_margin(line[:,letter[0]:letter[1]]), CHARTYPE.CHAR)
+			img = reshape_with_margin(line[:,letter[0]:letter[1]])
+			char = Char(img, CHARTYPE.CHAR)
 			l.append(char)
 		if i != length - 1:
 			l.append(Char(None, CHARTYPE.BLANK))
@@ -230,7 +233,7 @@ def to_paragraph(para):
 
 # reconst 모듈로 넘겨줄 paragraph list를 생성
 def get_graphs(img):
-	essay = dl.output_line_imgs(img, dl.find_line(im_bw))
+	essay = dl.output_line_imgs(img)
 	l = []
 	length = len(essay)
 	for i in range (0, length):
