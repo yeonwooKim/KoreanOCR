@@ -3,36 +3,53 @@ import cv2
 import numpy as np
 from detection.util import *
 
-# finds the lines that contain text and
-# return them as a list of tuples that indicate the location of starting and ending pt of each line
+# Implemented for testing; get img and change it to grayscale
+#original_img = cv2.imread('test/line_testing/test2.png')
+#grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+
+# Implemented for testing; change img to black & white
+#(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+
+#(x, y) = im_bw.shape
+
+# Sums up the row pixel value of a given row in an image
+def sumup_row(img, row_number):
+	sum = 0
+	(_, length) = img.shape
+	for i in range (0, length):
+		sum = sum + img.item(row_number, i)
+	return sum / length
+
+# Sums up the column pixel value of a given column in an image
+def sumup_col(img, col_number):
+	sum = 0
+	(length, _) = img.shape
+	for i in range (0, length):
+		sum = sum + img.item(i, col_number)
+	return sum / length
+
+# Finds the lines that contain text and
+# Return them as a list of tuples that indicate the location of starting and ending pt of each line
 def find_line(img):
 	start_idx, end_idx = -1, -1
 	trunc_row = []
 	(row, _) = img.shape
 	for i in range (0, row):
-		sum = sumup_column(img, i)
+		sum = sumup_row(img, i)
 		if sum > 0 and start_idx == -1:
 			start_idx = i
 		elif (sum == 0 and start_idx == -1) or sum > 0:
 			continue
 		elif sum == 0 and start_idx >= 0:
 			end_idx = i
-			if end_idx - start_idx >= 5:
-				if start_idx >= 2 and end_idx <= row - 3:
-					trunc_row.append((start_idx - 2, end_idx + 2))
-				elif start_idx >= 2:
-					trunc_row.append((start_idx - 2, end_idx))
-				elif end_idx <= row - 3:
-					trunc_row.append((start_idx, end_idx + 2))
-				else:
-					trunc_row.append((start_idx, end_idx))
-
+			if end_idx - start_idx >= 2:
+				trunc_row.append((start_idx, end_idx))
 			start_idx, end_dix = -1, -1
 
 	return trunc_row
 
-# returns pair of total number of paragraphs and 
-#list of labels containing paragraph #
+# Returns pair of total number of paragraphs and 
+# list of labels containing paragraph #
 def label_paragraph(trunc_row):
 	label, num = [], 0
 	length = len(trunc_row)
@@ -43,17 +60,17 @@ def label_paragraph(trunc_row):
 	label.append(num)
 	return (num + 1, label)
 
-# trims line images
+# Trims line images
 def trim_line(img):
 	(x, y) = img.shape
 	fst, lst = -1, -1
 	for i in range (0, y):
-		sum = sumup_row(img, i)
+		sum = sumup_col(img, i)
 		if sum > 0:
 			fst = i
 			break
 	for i in range (0, y):
-		sum = sumup_row(img, y - 1 - i)
+		sum = sumup_col(img, y - 1 - i)
 		if sum > 0:
 			lst = y - 1 - i
 			break
@@ -65,8 +82,8 @@ def trim_line(img):
 		return img[0:x, fst - 10:y]
 	return img[0:x, fst - 10:lst + 10]
 
-# truncates the imgs to line imgs
-# returns list of img objects
+# Truncates the imgs to line imgs
+# Returns list of img objects
 def get_line_imgs(img, trunc_row):
 	line_imgs = []
 	l = len(trunc_row)
@@ -74,7 +91,16 @@ def get_line_imgs(img, trunc_row):
 		line_imgs.append(trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
 	return line_imgs
 
-# outputs line imgs in the form of following:
+# Implemented for testing; saves line images by paragraph and line number
+def save_line_imgs(img, trunc_row):
+	length = len(trunc_row)
+	label = label_location(trunc_row)
+	imgs = get_line_imgs(img, trunc_row)
+	for i in range (0, length):
+		name = "test/paragraph" + str(label[i][0]) + "line" + str(label[i][1]) + ".png"
+		cv2.imwrite(name, imgs[i])
+
+# Outputs line imgs in the form of following:
 # [paragraph_1, paragraph_2, ...]
 # paragraph_n = [line_1, line_2, ...]
 # line_n = line img
