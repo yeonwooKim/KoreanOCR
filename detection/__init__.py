@@ -1,4 +1,8 @@
 import numpy as np
 from scipy.misc import imresize
-from detection.detect_char import get_graphs
-from detection.util import *
+import sys
+
+sys.path.append(os.path.dirname(__file__))
+
+from detect_char import get_graphs
+from util import *

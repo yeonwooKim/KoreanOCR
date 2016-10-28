@@ -1,47 +1,19 @@
 import cv2
 import numpy as np
-import detection.detect_line as dl
 import statistics
 import math
-from detection.util import *
+from util import *
+import detect_line as dl
 
 # If executed directly
-if __name__ == '__main__':
-	from enum import Enum
+def run_direct():
 	original_img = cv2.imread('test/line_testing/test2.png')
 	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 	(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 	(x, y) = im_bw.shape
 
-	essay = dl.output_line_imgs(im_bw, dl.find_line(im_bw))
-
-	class Paragraph:
-		def __init__(self, lines):
-			self.lines = lines
-
-	class Line:
-		def __init__(self, chars):
-			self.chars = chars
-
-	class CHARTYPE(Enum):
-		CHAR = 0
-		BLANK = 1
-
-	# 각 문자의 정보를 담고 있음
-	# img는 32 X 32 numpy array여야 함
-	# blank, 즉 띄어쓰기도 하나의 char로 간주하여 추가해주어야함
-	class Char:
-		def __init__(self, img, type):
-			self.img = img
-			self.type = type
-
-	# Sums up the column pixel value of a given column in an image
-	def sumup_col(img, col_number):
-		sum = 0
-		(length, _) = img.shape
-		for i in range (0, length):
-			sum = sum + img.item(i, col_number)
-		return sum / length
+	essay = dl.output_line_imgs(im_bw)
+	save_essay(essay)
 
 # Returns all the candidate letter points as a list of pairs and max width of letter
 # Return value:
@@ -188,13 +160,12 @@ def proc_paragraph(para):
 # Implemented for testing; truncates line image to letters and saves letter images
 # with word and letter information
 def trunc_n_save_letter(para_num, line_num, line, candidate):
-	(x, y) = line.shape
 	cnt_word = 0
 	for word in candidate:
 		cnt_letter = 0
 		for letter in word:
 			cv2.imwrite('test/char_testing/p' + str(para_num) + 'l' + str(line_num) +
-					'w' + str(cnt_word) + 'l' + str(cnt_letter) + '.png', line[0:x,letter[0]:letter[1]])
+					'w' + str(cnt_word) + 'l' + str(cnt_letter) + '.png', line[:,letter[0]:letter[1]])
 			cnt_letter = cnt_letter + 1
 		cnt_word = cnt_word + 1
 
@@ -240,3 +211,6 @@ def get_graphs(img):
 		para = to_paragraph(essay[i])
 		l.append(para)
 	return l
+
+if __name__ == "__main__":
+	run_direct()
