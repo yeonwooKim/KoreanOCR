@@ -11,6 +11,7 @@ import detection
 import chrecog
 chrecog.load_ckpt("data/161020.ckpt")
 import reconst
+import semantic
 
 app = Flask(__name__)
 
@@ -29,13 +30,8 @@ def sizeof_fmt(num, suffix='B'):
 def analysis(img):
     processed = preproc.process(img)
     graphs = detection.get_graphs(processed)
-    # TODO: do this in batch, not pred_one
-    for p in graphs:
-        for l in p.lines:
-            for c in l.chars:
-                if c.type != "blank":
-                    c.pred = chrecog.get_pred_one(c.img)
-    return reconst.build_graphs(graphs)
+    result = semantic.analyze(graphs)
+    return reconst.build_graphs(result)
 
 # 프론트엔드 index
 @app.route('/')

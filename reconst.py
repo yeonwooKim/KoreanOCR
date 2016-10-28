@@ -1,7 +1,7 @@
 # reconst.py
 # Reconstruction
 from chrecog import get_candidate
-from detection import CHARTYPE
+from detection.util import CHARTYPE
 
 # 단순히 모든 char를 순서대로 출력
 def build_graphs(graphs):
