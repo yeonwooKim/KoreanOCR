@@ -9,7 +9,7 @@ import numpy as np
 import preproc
 import detection
 import chrecog
-chrecog.load_ckpt("data/161020.ckpt")
+chrecog.load_ckpt("data/ckpt/161020.ckpt")
 import reconst
 import semantic
 
