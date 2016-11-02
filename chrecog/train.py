@@ -201,6 +201,7 @@ class Trainer:
                     print_accuracy(sess, testimg, testlabel, True, executor)
                     trainimg.seek(0)
                     trainlabel.seek(0)
+                    batch_f = load_batch(executor, trainimg, trainlabel, batchsize)
                     epoch += 1
                     continue
 
