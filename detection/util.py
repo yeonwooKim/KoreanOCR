@@ -11,6 +11,8 @@ class Line:
 class CHARTYPE(Enum):
     CHAR = 0
     BLANK = 1
+    def __eq__(self, other):
+        return self.value == other.value
 
 # 각 문자의 정보를 담고 있음
 # img는 32 X 32 numpy array여야 함
