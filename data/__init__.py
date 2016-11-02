@@ -79,6 +79,11 @@ def get_label(index_data):
     print("label loaded")
     return label
 
+def get_label_from_tar(tar):
+    ft = tar.extractfile(tar.getmembers()[-1])
+    ft_str = io.TextIOWrapper(ft)
+    return get_label(json.load(ft_str))
+
 def get_all(path):
     index_data, img = get_image_index_from_file(path)
     label = get_label(index_data)
