@@ -6,6 +6,20 @@ msg_help = """python trainer.py
 -e <epoch to train>
 -b <mini batch size>"""
 
+def train(data_path, save_path, max_epoch=4, batchsize=100):
+    import data
+    from chrecog.train import Trainer
+    
+    print('Ckpt save path : %s' % save_path)
+    print('Reading tar file from %s...' % data_path)
+    tar = tarfile.open(data_path, "r:*")
+    label = data.get_label_from_tar(tar)
+    
+    trainer = Trainer(tar, label)
+    trainer.init_session()
+    trainer.train(max_epoch=max_epoch, batchsize=batchsize)
+    trainer.save(save_path)
+
 def main(argv):
     data_path = None
     save_path = None
@@ -33,18 +47,7 @@ def main(argv):
         print(msg_help)
         sys.exit(2)
     
-    import data
-    from chrecog.train import Trainer
-    
-    print('Ckpt save path : %s' % save_path)
-    print('Reading tar file from %s...' % data_path)
-    tar = tarfile.open(data_path, "r:*")
-    label = data.get_label_from_tar(tar)
-    
-    trainer = Trainer(tar, label)
-    trainer.init_session()
-    trainer.train(max_epoch=max_epoch, batchsize=batchsize)
-    trainer.save(save_path)
+    train(data_path, save_path, max_epoch, batchsize)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
