@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from data.buffer import *
 from hangul_utils import join_jamos_char
 import numpy as np
+from time import strftime
 
 Y = tf.placeholder(tf.float32, [None, Y_size])
 Y_cho, Y_jung, Y_jong, Y_en = slice_label(Y,
@@ -71,37 +72,37 @@ def _load_batch(imgbuf, labelbuf, batchsize):
 
 # Prepare batch on another thread concurrently
 def load_batch(executor, imgbuf, labelbuf, batchsize):
-    return executor.submit(_load_batch, imgbuf, labelbuf, batchsize)    
+    return executor.submit(_load_batch, imgbuf, labelbuf, batchsize)
 
-def get_accuracy_no_batch(sess, imgset, labelset):
-    return sess.run((accuracy, accuracy_cho, accuracy_jung, accuracy_jong, accuracy_two, accuracy_en),
-                                        feed_dict={X:imgset, Y:labelset, keep_prob:1})
-
-def get_accuracy(sess, imgbuf, labelbuf, batch=True, executor=None):
+def get_mean_in_batch(sess, target, imgbuf, labelbuf, executor):
     imgbuf.seek(0)
     labelbuf.seek(0)
     
-    if batch:
-        temp_tuple = 0, 0, 0, 0, 0, 0
-        i = 0
+    temp_tuple = (0,) * len(target)
+    i = 0
+    batch_f = load_batch(executor, imgbuf, labelbuf, 100)
+    while(True):
+        batch_x, batch_y = batch_f.result()
         batch_f = load_batch(executor, imgbuf, labelbuf, 100)
-        while(True):
-            batch_x, batch_y = batch_f.result()
-            batch_f = load_batch(executor, imgbuf, labelbuf, 100)
-            if batch_x is None:
-                break
-            temp_tuple = tuple([item1 + item2 * batch_x.shape[0] for item1, item2 in
-                                zip(temp_tuple,
-                                    get_accuracy_no_batch(sess, batch_x, batch_y))])
-            i += batch_x.shape[0]
-        tacc, tacc_cho, tacc_jung, tacc_jong, tacc_two, tacc_en = tuple([item / i for item in temp_tuple])
+        if batch_x is None:
+            break
+        temp_tuple = tuple([item1 + item2 * batch_x.shape[0] for item1, item2 in
+                            zip(temp_tuple,
+                                sess.run(target, feed_dict={X:batch_x, Y:batch_y, keep_prob:1}))])
+        i += batch_x.shape[0]
+    return tuple([item / i for item in temp_tuple])
+
+accuracy_target = (accuracy, accuracy_cho, accuracy_jung, accuracy_jong, accuracy_two, accuracy_en)
+
+def get_accuracy(sess, imgbuf, labelbuf, batch=True, executor=None):
+    if batch:
+        return get_mean_in_batch(sess, accuracy_target, imgbug, labelbuf, executor)
     else:
-        tacc, tacc_cho, tacc_jung, tacc_jong, tacc_two, tacc_en = get_accuracy_no_batch(sess, imgbuf.read(), labelbuf.read())
-    return tacc, tacc_cho, tacc_jung, tacc_jong, tacc_two, tacc_en
+        return sess.run(accuracy_target, feed_dict={X:imgset, Y:labelset, keep_prob:1})
     
 def print_accuracy(sess, imgbuf, labelbuf, batch=True, executor=None):
     tacc, tacc_cho, tacc_jung, tacc_jong, tacc_two, tacc_en = get_accuracy(sess, imgbuf, labelbuf, batch, executor)
-    print ("overall accuracy = %.3f                          " % tacc)
+    print ("overall accuracy = %.3f" % tacc)
     print ("two of three = %.3f" % tacc_two)
     print ("cho = %.3f" % tacc_cho)
     print ("jung = %.3f" % tacc_jung)
@@ -147,6 +148,9 @@ def error_check(sess, chset, pred_tf, label_tf, imgbuf, labelbuf):
             print ("%6d errors with %s" % (n_error[i][most_error], new_chset[most_error]))
         else:
             print ("")
+            
+def get_now_str():
+    return strftime("%Y-%m-%d %H:%M:%S")
 
 class Trainer:
     def __init__(self, imgtar, label):
@@ -181,7 +185,7 @@ class Trainer:
         
         trainsize = trainimg.size
         batch_per_epoch = int(trainsize/batchsize)
-        print ("Training %d, mini-batch %d * %d" % (trainsize, batchsize, batch_per_epoch))
+        print ("[%s] Training %d, mini-batch %d * %d" % (get_now_str(), trainsize, batchsize, batch_per_epoch))
         epoch = 0
 
         i = 0
@@ -192,12 +196,10 @@ class Trainer:
             trainlabel.seek(0)
             batch_f = load_batch(executor, trainimg, trainlabel, batchsize)
             while (epoch < max_epoch):
-                if i % 200 == 0 :
-                    tacc = get_accuracy(sess, cvimg, cvlabel, True, executor)[0]
-                    print ("%6dth epoch : cv accuracy = %.3f                  " % (epoch, tacc))
-
                 batch_x, batch_y = batch_f.result()
                 if batch_x is None:
+                    print("                                        \r", end="")
+                    print("[%s] %2dth epoch done" % (get_now_str(), epoch+1))
                     print_accuracy(sess, testimg, testlabel, True, executor)
                     trainimg.seek(0)
                     trainlabel.seek(0)
@@ -210,12 +212,21 @@ class Trainer:
 
                 cur_cost = sess.run((train, cost_mean),
                                     feed_dict={X:batch_x, Y:batch_y, keep_prob:0.5, learning_rate:lr})[1]
+                
+                if i % 200 == 0 :
+                    print("                                        \r", end="")
+                    cv_cost, cv_acc = get_mean_in_batch(sess, (cost_mean, accuracy), cvimg, cvlabel, executor)
+                    cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, keep_prob:1})
+                    print ("[%s] %5d %2d %4.2e %4.3f %4.2e %4.3f" %
+                           (get_now_str(), i/200, epoch, train_cost, train_acc, cv_cost, cv_acc))
+                    
                 if(is_console):
                     print ("%dth... lr = %.2e, cost = %.2e\r" % (i, lr, cur_cost), end="")
                 lr = lr * (1 - 0.0003)
                 i += 1
 
-            print("train complete--------------------------------")
+            print("                                        \r", end="")
+            print("[%s] train complete" % get_now_str())
             print("test accuracy ---")
             print_accuracy(sess, testimg, testlabel, True, executor)
             print("train accuracy ---")
