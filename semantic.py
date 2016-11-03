@@ -8,7 +8,7 @@ def analyze(graphs):
             for c in l.chars:
                 if c.type != CHARTYPE.BLANK:
                     assert c.type == CHARTYPE.CHAR
-                    c.pred = get_pred_one(c.img)
+                    c.pred = get_pred_one(c.img / 255)
                     c.value = get_candidate(c.pred)
                 else:
                     c.value = " "

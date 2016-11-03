@@ -14,7 +14,7 @@ import semantic
 
 
 sess = get_session()
-load_ckpt(sess, "data/ckpt/161102.ckpt")
+load_ckpt(sess, "data/ckpt/161103_2ID.ckpt")
 
 app = Flask(__name__)
 
