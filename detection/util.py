@@ -20,18 +20,40 @@ class Char:
         self.img = img
         self.type = CHARTYPE.CHAR
 
-# sums up the column pixel value of a given row in an image
-def sumup_column(img, row_number):
+# Sums up the row pixel value of a given row in an image
+def sumup_row(img, row_number):
 	sum = 0
 	(_, length) = img.shape
 	for i in range (0, length):
 		sum = sum + img.item(row_number, i)
 	return sum / length
 
-# sums up the row pixel value of a given column in an image
-def sumup_row(img, col_number):
+# Sums up the column pixel value of a given column in an image
+def sumup_col(img, col_number):
 	sum = 0
 	(length, _) = img.shape
 	for i in range (0, length):
 		sum = sum + img.item(i, col_number)
 	return sum / length
+
+# Trims line images
+def trim_line(img):
+	(x, y) = img.shape
+	fst, lst = -1, -1
+	for i in range (0, y):
+		sum = sumup_col(img, i)
+		if sum > 0:
+			fst = i
+			break
+	for i in range (0, y):
+		sum = sumup_col(img, y - 1 - i)
+		if sum > 0:
+			lst = y - 1 - i
+			break
+	if fst < 10 and lst >= y - 10:
+		return img
+	elif fst < 10:
+		return img[0:x, 0:lst + 10]
+	elif lst >= y - 10:
+		return img[0:x, fst - 10:y]
+	return img[0:x, fst - 10:lst + 10]

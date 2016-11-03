@@ -4,6 +4,7 @@ from enum import Enum
 import detect_line as dl
 import statistics
 import math
+import util
 
 original_img = cv2.imread('test/line_testing/test3.png')
 grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
@@ -11,34 +12,6 @@ grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 (x, y) = im_bw.shape
 
 essay = dl.output_line_imgs(im_bw)
-
-class Paragraph:
-    def __init__(self, lines):
-        self.lines = lines
-
-class Line:
-    def __init__(self, chars):
-        self.chars = chars
-
-class CHARTYPE(Enum):
-    CHAR = 0
-    BLANK = 1
-
-# 각 문자의 정보를 담고 있음
-# img는 32 X 32 numpy array여야 함
-# blank, 즉 띄어쓰기도 하나의 char로 간주하여 추가해주어야함
-class Char:
-    def __init__(self, img, type):
-        self.img = img
-        self.type = type
-
-# Sums up the column pixel value of a given column in an image
-def sumup_col(img, col_number):
-	sum = 0
-	(length, _) = img.shape
-	for i in range (0, length):
-		sum = sum + img.item(i, col_number)
-	return sum / length
 
 # Returns all the candidate letter points as a list of pairs and max width of letter
 # Return value:
@@ -54,7 +27,7 @@ def fst_pass(line):
 
 	(height, length) = line.shape
 	for i in range (0, length):
-		sum = sumup_col(line, i)
+		sum = util.sumup_col(line, i)
 		if sum > 0 and start_letter == -1:
 			if i == 0:
 				start_letter = i
@@ -95,7 +68,7 @@ def find_split_pts(index, num_letter, size, img):
 	while num_letter != 0:
 		pt, m = -1, math.inf
 		for j in range (i + int(size), min(w, i + int(size) + 7)):
-			s = sumup_col(img, j)
+			s = util.sumup_col(img, j)
 			if (s <= m):
 				pt = j
 				m = s
@@ -123,12 +96,10 @@ def snd_pass(line, size, candidate):
 			if merged == 1:
 				merged = 0
 				continue
-			if size - 5 <= word[i + 1][1] - word[i][0] < height and width[i] >= width[i + 1]:
+			if size - 5 <= word[i + 1][1] - word[i][0] <= height and width[i] >= width[i + 1]:
 				snd_word.append((word[i][0], word[i + 1][1]))
 				merged = 1
-			elif size - 2 <= width[i] < height:
-				snd_word.append(word[i])
-			elif width[i] >= height:
+			elif width[i] > height:
 				num_letter = width[i] // size
 				pts = find_split_pts(word[i][0], num_letter, size, line[0:, word[i][0]:word[i][1]])
 				l = len(pts)

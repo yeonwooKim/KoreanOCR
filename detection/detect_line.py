@@ -1,6 +1,7 @@
 from __future__ import division
 import cv2
 import numpy as np
+import util
 
 # Implemented for testing; get img and change it to grayscale
 #original_img = cv2.imread('test/line_testing/test2.png')
@@ -11,22 +12,6 @@ import numpy as np
 
 #(x, y) = im_bw.shape
 
-# Sums up the row pixel value of a given row in an image
-def sumup_row(img, row_number):
-	sum = 0
-	(_, length) = img.shape
-	for i in range (0, length):
-		sum = sum + img.item(row_number, i)
-	return sum / length
-
-# Sums up the column pixel value of a given column in an image
-def sumup_col(img, col_number):
-	sum = 0
-	(length, _) = img.shape
-	for i in range (0, length):
-		sum = sum + img.item(i, col_number)
-	return sum / length
-
 # Finds the lines that contain text and
 # Return them as a list of tuples that indicate the location of starting and ending pt of each line
 def find_line(img):
@@ -34,7 +19,7 @@ def find_line(img):
 	trunc_row = []
 	(row, _) = img.shape
 	for i in range (0, row):
-		sum = sumup_row(img, i)
+		sum = util.sumup_row(img, i)
 		if sum > 0 and start_idx == -1:
 			start_idx = i
 		elif (sum == 0 and start_idx == -1) or sum > 0:
@@ -59,35 +44,13 @@ def label_paragraph(trunc_row):
 	label.append(num)
 	return (num + 1, label)
 
-# Trims line images
-def trim_line(img):
-	(x, y) = img.shape
-	fst, lst = -1, -1
-	for i in range (0, y):
-		sum = sumup_col(img, i)
-		if sum > 0:
-			fst = i
-			break
-	for i in range (0, y):
-		sum = sumup_col(img, y - 1 - i)
-		if sum > 0:
-			lst = y - 1 - i
-			break
-	if fst < 10 and lst >= y - 10:
-		return img
-	elif fst < 10:
-		return img[0:x, 0:lst + 10]
-	elif lst >= y - 10:
-		return img[0:x, fst - 10:y]
-	return img[0:x, fst - 10:lst + 10]
-
 # Truncates the imgs to line imgs
 # Returns list of img objects
 def get_line_imgs(img, trunc_row):
 	line_imgs = []
 	l = len(trunc_row)
 	for i in range (0, l):
-		line_imgs.append(trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
+		line_imgs.append(util.trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
 	return line_imgs
 
 # Implemented for testing; saves line images by paragraph and line number
@@ -140,7 +103,7 @@ def save_line_imgs(img, trunc_row):
 # If executed directly
 if __name__ == '__main__':
 	# get img and change it to grayscale
-	original_img = cv2.imread('test/test.png')
+	original_img = cv2.imread('test/line_testing/test.png')
 	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 
 	# change img to black & white
