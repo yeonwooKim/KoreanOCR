@@ -55,18 +55,11 @@ cnn_1_pool = max2d_pool(cnn_1_concat) # 16 * 16 * 48
 cnn_2_5 = build_cnn(18, [5,5], cnn_1_pool, "cnn_2_5")
 cnn_2_3 = build_cnn(48, [3,3], cnn_1_pool, "cnn_2_3")
 cnn_2_1 = build_cnn(30, [1,1], cnn_1_pool, "cnn_2_1")
-cnn_2_concat = tf.concat(3, [cnn_2_5, cnn_2_3, cnn_2_1])
-cnn_2_pool = max2d_pool(cnn_2_concat) # 8 * 8 * 96
+cnn_2_concat = tf.concat(3, [cnn_2_5, cnn_2_3, cnn_2_1]) # 16 * 16 * 96
 
-cnn_3_5_reduce = build_cnn(18, [1,1], cnn_2_pool, "cnn_3_5_reduce")
-cnn_3_5 = build_cnn(36, [5,5], cnn_3_5_reduce, "cnn_3_5")
-cnn_3_3_reduce = build_cnn(64, [1,1], cnn_2_pool, "cnn_3_3_reduce")
-cnn_3_3 = build_cnn(96, [3,3], cnn_3_3_reduce, "cnn_3_3")
-cnn_3_1 = build_cnn(60, [1,1], cnn_2_pool, "cnn_3_1")
-cnn_3_concat = tf.concat(3, [cnn_3_5, cnn_3_3, cnn_3_1])
-cnn_3_pool = max2d_pool(cnn_3_concat) # 4 * 4 * 192
+cnn_2_reduce = build_cnn(24, [1,1], cnn_2_concat, "cnn_2_r")
 
-dense_1 = tf.nn.relu(build_nn(1024, flatten_cnn(cnn_3_pool), "dense_1"))
+dense_1 = tf.nn.relu(build_nn(1024, flatten_cnn(cnn_2_reduce), "dense_1"))
 dropout_1 = tf.nn.dropout(dense_1, keep_prob)
 
 logit = build_nn(Y_size, dropout_1, "logit")

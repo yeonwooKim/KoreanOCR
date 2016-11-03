@@ -174,7 +174,7 @@ class Trainer:
     def print_test_accuracy(self):
         print_accuracy_std(self.sess, self.testimg, self.testlabel)
     
-    def train(self, max_epoch=4, batchsize=200, lr_init = 0.003, stat=True):
+    def train(self, max_epoch=4, batchsize=200, lr_init = 0.003, prog=False, stat=True):
         trainimg = self.trainimg
         trainlabel = self.trainlabel
         cvimg = self.cvimg
@@ -215,7 +215,8 @@ class Trainer:
                                     feed_dict={X:batch_x, Y:batch_y, keep_prob:0.5, learning_rate:lr})[1]
                 
                 if i % 200 == 0 :
-                    print("                                        \r", end="")
+                    if prog == True:
+                        print("                                        \r", end="")
                     if stat == True :
                         cv_cost, cv_acc = get_mean_in_batch(sess, (cost_mean, accuracy), cvimg, cvlabel, executor)
                         cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, keep_prob:1})
@@ -223,7 +224,8 @@ class Trainer:
                             (get_now_str(), num_trained/trainsize, cur_cost, cur_acc, cv_cost, cv_acc))
                     else :
                         print ("[%s] %4.2f %4.2e" % (get_now_str(), num_trained/trainsize, cur_cost))
-                print ("%dth... lr = %.2e, cost = %.2e\r" % (i, lr, cur_cost), end="")
+                if prog == True:
+                    print ("%dth... lr = %.2e, cost = %.2e\r" % (i, lr, cur_cost), end="")
                 lr = lr * (1 - 0.0003)
             print("                                        \r", end="")
             print("[%s] train complete" % get_now_str())
