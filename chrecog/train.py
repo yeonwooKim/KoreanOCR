@@ -150,12 +150,12 @@ def error_check(sess, chset, pred_tf, label_tf, imgbuf, labelbuf):
 
 class Trainer:
     def __init__(self, imgtar, label):
-        self.trainimg = TarBuffer(imgtar, 15000, -1)
-        self.trainlabel = ArrayBuffer(label, 15000, -1)
-        self.cvimg = TarBuffer(imgtar, 12000, 3000)
-        self.cvlabel = ArrayBuffer(label, 12000, 3000)
-        self.testimg = TarBuffer(imgtar, 0, 12000)
-        self.testlabel = ArrayBuffer(label, 0, 12000)
+        self.trainimg = TarBuffer(imgtar, 90000, -1)
+        self.trainlabel = ArrayBuffer(label, 90000, -1)
+        self.cvimg = TarBuffer(imgtar, 60000, 30000)
+        self.cvlabel = ArrayBuffer(label, 60000, 30000)
+        self.testimg = TarBuffer(imgtar, 0, 60000)
+        self.testlabel = ArrayBuffer(label, 0, 60000)
         self.sess = tf.Session()
     
     def init_session(self):
