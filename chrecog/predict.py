@@ -6,6 +6,9 @@ from chrecog.core import *
 
 sess = tf.Session()
 
+def get_session():
+    return sess
+
 class Prediction:
     def __init__(self, pred_cho, pred_jung, pred_jong, pred_en):
         self.pred_cho = pred_cho

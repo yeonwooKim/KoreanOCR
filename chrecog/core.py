@@ -91,9 +91,9 @@ def init_session(sess):
 def save_ckpt(sess, path):
     saver = tf.train.Saver(var_before_adam)
     saver.save(sess, path)
-    print("ckpt saved")
+    print("ckpt saved to %s" % path)
     
 def load_ckpt(sess, path):
     saver = tf.train.Saver(var_before_adam)
     saver.restore(sess, path)
-    print("ckpt loaded")
+    print("ckpt loaded from %s" % path)

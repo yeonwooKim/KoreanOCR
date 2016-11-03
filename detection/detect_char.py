@@ -68,7 +68,7 @@ def find_split_pts(index, num_letter, size, img):
 	i = 0
 	pts = []
 	while num_letter != 0:
-		pt, m = -1, math.inf
+		pt, m = -1, float("inf")
 		for j in range (i + int(size), min(w, i + int(size) + 7)):
 			s = sumup_col(img, j)
 			if (s <= m):
@@ -125,7 +125,7 @@ def snd_pass(line, size, candidate):
 
 # Reshape narrow letters to 32 X 32
 # without modifying ratio
-def reshape_with_margin(img, size=32, pad=3):
+def reshape_with_margin(img, size=32, pad=4):
 	if img.shape[0] > img.shape[1] :
 		dim = img.shape[0]
 		margin = (dim - img.shape[1])//2
@@ -151,6 +151,8 @@ def proc_paragraph(para):
 		fst_candidate.append(c)
 		wlist.append(m)
 	l = len(para)
+	if len(wlist) == 0:
+		return []
 	letter_size = statistics.median(wlist)
 	for i in range (0, l):
 		c = snd_pass(para[i], letter_size, fst_candidate[i])

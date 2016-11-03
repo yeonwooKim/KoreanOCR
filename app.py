@@ -8,10 +8,13 @@ import numpy as np
 
 import preproc
 import detection
-import chrecog
-chrecog.load_ckpt("data/ckpt/161020.ckpt")
+from chrecog.predict import get_session, load_ckpt
 import reconst
 import semantic
+
+
+sess = get_session()
+load_ckpt(sess, "data/ckpt/161102.ckpt")
 
 app = Flask(__name__)
 
@@ -59,4 +62,4 @@ def view_upload():
 # 웹서버를 통하지 않고
 # python 인터프리터로 바로 실행되었을 때
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run("0.0.0.0", debug=True)
