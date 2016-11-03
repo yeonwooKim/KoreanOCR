@@ -4,9 +4,10 @@ msg_help = """python trainer.py
 -i <tar data>
 -o <path to save>
 -e <epoch to train>
--b <mini batch size>"""
+-b <mini batch size>
+-v"""
 
-def train(data_path, save_path, max_epoch=4, batchsize=100):
+def train(data_path, save_path, max_epoch=4, batchsize=100, stat=False):
     import data
     from chrecog.train import Trainer
     
@@ -17,16 +18,17 @@ def train(data_path, save_path, max_epoch=4, batchsize=100):
     
     trainer = Trainer(tar, label)
     trainer.init_session()
-    trainer.train(max_epoch=max_epoch, batchsize=batchsize)
+    trainer.train(max_epoch=max_epoch, batchsize=batchsize, stat=stat)
     trainer.save(save_path)
 
 def main(argv):
     data_path = None
     save_path = None
     max_epoch = 4
-    batchsize = 100
+    batchsize = 200
+    stat = False
     try:
-        opts, args = getopt.getopt(argv,"hi:o:e:b:",["input=","output=","epoch=","batch="])
+        opts, args = getopt.getopt(argv,"hvi:o:e:b:",["verbose","input=","output=","epoch=","batch="])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
@@ -34,6 +36,8 @@ def main(argv):
         if opt in ("-h", "--help"):
             print(msg_help)
             sys.exit()
+        elif opt in ("-v", "--verbose"):
+            stat = True
         elif opt in ("-i", "--input"):
             data_path = arg
         elif opt in ("-o", "--output"):
@@ -47,7 +51,7 @@ def main(argv):
         print(msg_help)
         sys.exit(2)
     
-    train(data_path, save_path, max_epoch, batchsize)
+    train(data_path, save_path, max_epoch, batchsize, stat)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

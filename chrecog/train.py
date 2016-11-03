@@ -96,7 +96,7 @@ accuracy_target = (accuracy, accuracy_cho, accuracy_jung, accuracy_jong, accurac
 
 def get_accuracy(sess, imgbuf, labelbuf, batch=True, executor=None):
     if batch:
-        return get_mean_in_batch(sess, accuracy_target, imgbug, labelbuf, executor)
+        return get_mean_in_batch(sess, accuracy_target, imgbuf, labelbuf, executor)
     else:
         return sess.run(accuracy_target, feed_dict={X:imgset, Y:labelset, keep_prob:1})
     
@@ -174,7 +174,7 @@ class Trainer:
     def print_test_accuracy(self):
         print_accuracy_std(self.sess, self.testimg, self.testlabel)
     
-    def train(self, max_epoch=4, batchsize=200, is_console=True, lr_init = 0.003):
+    def train(self, max_epoch=4, batchsize=200, lr_init = 0.003, stat=True):
         trainimg = self.trainimg
         trainlabel = self.trainlabel
         cvimg = self.cvimg
@@ -189,6 +189,7 @@ class Trainer:
         epoch = 0
 
         i = 0
+        num_trained = 0
         lr = lr_init
 
         with ThreadPoolExecutor(max_workers=1) as executor:
@@ -198,9 +199,6 @@ class Trainer:
             while (epoch < max_epoch):
                 batch_x, batch_y = batch_f.result()
                 if batch_x is None:
-                    print("                                        \r", end="")
-                    print("[%s] %2dth epoch done" % (get_now_str(), epoch+1))
-                    print_accuracy(sess, testimg, testlabel, True, executor)
                     trainimg.seek(0)
                     trainlabel.seek(0)
                     batch_f = load_batch(executor, trainimg, trainlabel, batchsize)
@@ -210,21 +208,23 @@ class Trainer:
                 ## Load batch must be after None check, because None check modifies buffer index
                 batch_f = load_batch(executor, trainimg, trainlabel, batchsize)
 
+                i += 1
+                num_trained += batch_x.shape[0]
+
                 cur_cost = sess.run((train, cost_mean),
                                     feed_dict={X:batch_x, Y:batch_y, keep_prob:0.5, learning_rate:lr})[1]
                 
                 if i % 200 == 0 :
                     print("                                        \r", end="")
-                    cv_cost, cv_acc = get_mean_in_batch(sess, (cost_mean, accuracy), cvimg, cvlabel, executor)
-                    cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, keep_prob:1})
-                    print ("[%s] %5d %2d %4.2e %4.3f %4.2e %4.3f" %
-                           (get_now_str(), i/200, epoch, train_cost, train_acc, cv_cost, cv_acc))
-                    
-                if(is_console):
-                    print ("%dth... lr = %.2e, cost = %.2e\r" % (i, lr, cur_cost), end="")
+                    if stat == True :
+                        cv_cost, cv_acc = get_mean_in_batch(sess, (cost_mean, accuracy), cvimg, cvlabel, executor)
+                        cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, keep_prob:1})
+                        print ("[%s] %4.2f %4.2e %4.3f %4.2e %4.3f" %
+                            (get_now_str(), num_trained/trainsize, cur_cost, cur_acc, cv_cost, cv_acc))
+                    else :
+                        print ("[%s] %4.2f %4.2e" % (get_now_str(), num_trained/trainsize, cur_cost))
+                print ("%dth... lr = %.2e, cost = %.2e\r" % (i, lr, cur_cost), end="")
                 lr = lr * (1 - 0.0003)
-                i += 1
-
             print("                                        \r", end="")
             print("[%s] train complete" % get_now_str())
             print("test accuracy ---")
