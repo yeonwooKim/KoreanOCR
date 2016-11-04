@@ -20,11 +20,11 @@ def find_line(img):
 	(row, _) = img.shape
 	for i in range (0, row):
 		sum = util.sumup_row(img, i)
-		if sum > 0 and start_idx == -1:
+		if sum >= 2 and start_idx == -1:
 			start_idx = i
-		elif (sum == 0 and start_idx == -1) or sum > 0:
+		elif (sum < 2 and start_idx == -1) or sum > 0:
 			continue
-		elif sum == 0 and start_idx >= 0:
+		elif sum < 2 and start_idx >= 0:
 			end_idx = i
 			if end_idx - start_idx >= 2:
 				trunc_row.append((start_idx, end_idx))
