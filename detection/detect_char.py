@@ -172,37 +172,109 @@ def save_essay(essay):
 			trunc_n_save_letter(i, j, 3, essay[i][j], c2[j])
 			trunc_n_save_letter(i, j, 4, essay[i][j], c2[j])
 
-save_essay(essay)
+# Given four lists (candidate lists of different threshold),
+# finds the indices for each list with the same end points
+# returns them in a tuple along with the value of the end point
+def find_common_pt(list1, list2, list3, list4):
+	i1, i2, i3, i4 = 0, 0, 0, 0
+	l1, l2, l3, l4 = len(list1), len(list2), len(list3), len(list4)
+	while (i1 < l1 and i2 < l2 and i3 < l3 and i4 < l4):
+		e1, e2, e3, e4 = list1[i1][1], list2[i2][1], list3[i3][1], list4[i4][1]
+		m = min(e1, e2, e3, e4)
+		if e1 == e2 and e2 == e3 and e3 == e4:
+			break;
+		if m == e1:
+			i1 = i1 + 1
+		if m == e2:
+			i2 = i2 + 1
+		if m == e3:
+			i3 = i3 + 1
+		if m == e4:
+			i4 = i4 + 1
+	return (m, i1, i2, i3, i4)
+
+# Given the four candidates, each candidate having form of
+# candidate ::= [ point1, point2, ... , pointN ]
+# pointn ::= (start index, end index)
+# returns list of characters
+def compare_pass(candidates):
+	char_list = []
+	(c1, c2, c3, c4) = candidates
+	i1, i2, i3, i4 = 0, 0, 0, 0
+	l1, l2, l3, l4 = len(c1), len(c2), len(c3), len(c4)
+	while (i1 < l1 and i2 < l2 and i3 < l3 and i4 < l4):
+		(m, p1, p2, p3, p4) = find_common_pt(c1[i1:], c2[i2:], c3[i3:], c4[i4:])
+		char = util.Char((c1[i1][0], m), util.CHARTYPE.CHAR)
+		if not (p1 == 0 and p2 == 0 and p3 == 0 and p4 == 0):
+			curr = char
+			for i in range (0, p1 + 1):
+				a = util.Char(c1[i1 + i], util.CHARTYPE.CHAR)
+				curr.add_child(a)
+				curr = a
+			curr = char
+			for i in range (0, p2 + 1):
+				child = curr.get_child(c2[i2 + i])
+				if child == None:
+					a = util.Char(c2[i2 + i], util.CHARTYPE.CHAR)
+					curr.add_child(a)
+					curr = a
+				else:
+					curr = child
+			curr = char
+			for i in range (0, p3 + 1):
+				child = curr.get_child(c3[i3 + i])
+				if child == None:
+					a = util.Char(c3[i3 + i], util.CHARTYPE.CHAR)
+					curr.add_child(a)
+					curr = a
+				else:
+					curr = child
+			curr = char
+			for i in range (0, p4 + 1):
+				child = curr.get_child(c4[i4 + i])
+				if child == None:
+					a = util.Char(c4[i4 + i], util.CHARTYPE.CHAR)
+					curr.add_child(a)
+					curr = a
+				else:
+					curr = child
+		char_list.append(char)
+		i1 = i1 + p1 + 1
+		i2 = i2 + p2 + 1
+		i3 = i3 + p3 + 1
+		i4 = i4 + p4 + 1
+	return char_list
 
 # Truncates line image to letters and constructs line classes
 # Resizes char images to 32 * 32
-def to_line(line, candidate):
+def to_line(line, candidates):
 	l = []
-	length = len(candidate)
+	(c1, c2, c3, c4) = candidates
+	length = len(c1)
 	for i in range (0, length):
-		for letter in candidate[i]:
-			char = Char(cv2.resize(line[0:,letter[0]:letter[1]], (32, 32)), CHARTYPE.CHAR)
-			l.append(char)
+		char_list = compare_pass((c1[i], c2[i], c3[i], c4[i]))
+		l = l + char_list
 		if i != length - 1:
-			l.append(Char(None, CHARTYPE.BLANK))
-	return Line(l)
+			l.append(util.Char(None, util.CHARTYPE.BLANK))
+	return util.Line(line, l)
 
 # Given a paragraph image, constructs a paragraph class
 def to_paragraph(para):
 	l = []
-	c = proc_paragraph(para)
+	(c1, c2, c3, c4) = proc_paragraph(para)
 	length = len(para)
 	for i in range (0, length):
-		line = to_line(para[i], c[i])	
+		line = to_line(para[i], (c1[i], c2[i], c3[i], c4[i]))	
 		l.append(line)
-	return Paragraph(l)
+	return util.Paragraph(l)
 
 # reconst 모듈로 넘겨줄 paragraph list를 생성
 def get_graphs(img):
-	essay = dl.output_line_imgs(img, dl.find_line(im_bw))
+	essay = dl.output_line_imgs(img)
 	l = []
 	length = len(essay)
 	for i in range (0, length):
 		para = to_paragraph(essay[i])
 		l.append(para)
 	return l
+get_graphs(im_bw)
