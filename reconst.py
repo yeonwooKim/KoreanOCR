@@ -14,5 +14,5 @@ def build_graphs(graphs):
                 else:
                     output += " "
             output += "\n"
-        output += "===="
+        output += "====\n"
     return output

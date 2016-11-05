@@ -4,14 +4,17 @@ from enum import Enum
 import detect_line as dl
 import statistics
 import math
-import util
+from util import *
 
-original_img = cv2.imread('test/line_testing/test3.png')
-grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
-(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
-(x, y) = im_bw.shape
+# If executed directly
+def run_direct():
+	original_img = cv2.imread('test/line_testing/test2.png')
+	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+	(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+	(x, y) = im_bw.shape
 
-essay = dl.output_line_imgs(im_bw)
+	essay = dl.output_line_imgs(im_bw)
+	save_essay(essay)
 
 # Returns all the candidate letter points as a list of pairs and max width of letter
 # Return value:
@@ -29,7 +32,7 @@ def fst_pass(line):
 
 	(height, length) = line.shape
 	for i in range (0, length):
-		sum = util.sumup_col(line, i)
+		sum = sumup_col(line, i)
 		if sum > blank_thd and start_letter == -1:
 			if i == 0:
 				start_letter = i
@@ -70,7 +73,7 @@ def find_split_pts(index, num_letter, size, img):
 	while num_letter != 0:
 		pt, m = -1, math.inf
 		for j in range (i, w):
-			s = util.sumup_col(img, j)
+			s = sumup_col(img, j)
 			if (s <= m):
 				pt = j
 				m = s
@@ -121,6 +124,24 @@ def snd_pass(line, size, candidate, merge_thdl, merge_thdh):
 		snd_candidate.append(snd_word)
 		snd_word = []
 	return snd_candidate
+
+# Reshape narrow letters to 32 X 32
+# without modifying ratio
+def reshape_with_margin(img, size=32, pad=3):
+	if img.shape[0] > img.shape[1] :
+		dim = img.shape[0]
+		margin = (dim - img.shape[1])//2
+		margin_img = np.zeros([dim, margin])
+		reshaped = np.c_[margin_img, img, margin_img]
+	else :
+		dim = img.shape[1]
+		margin = (dim - img.shape[0])//2
+		margin_img = np.zeros([margin, dim])
+		reshaped = np.r_[margin_img, img, margin_img]
+	reshaped = cv2.resize(reshaped, (size-pad*2, size-pad*2))
+	padded = np.zeros([size, size])
+	padded[pad:-pad, pad:-pad] = reshaped
+	return padded
 
 # Given a paragraph, processes 2 times and returns the candidate word points
 def proc_paragraph(para):
@@ -204,18 +225,18 @@ def compare_pass(candidates):
 	l1, l2, l3, l4 = len(c1), len(c2), len(c3), len(c4)
 	while (i1 < l1 and i2 < l2 and i3 < l3 and i4 < l4):
 		(m, p1, p2, p3, p4) = find_common_pt(c1[i1:], c2[i2:], c3[i3:], c4[i4:])
-		char = util.Char((c1[i1][0], m), util.CHARTYPE.CHAR)
+		char = Char((c1[i1][0], m), CHARTYPE.CHAR)
 		if not (p1 == 0 and p2 == 0 and p3 == 0 and p4 == 0):
 			curr = char
 			for i in range (0, p1 + 1):
-				a = util.Char(c1[i1 + i], util.CHARTYPE.CHAR)
+				a = Char(c1[i1 + i], CHARTYPE.CHAR)
 				curr.add_child(a)
 				curr = a
 			curr = char
 			for i in range (0, p2 + 1):
 				child = curr.get_child(c2[i2 + i])
 				if child == None:
-					a = util.Char(c2[i2 + i], util.CHARTYPE.CHAR)
+					a = Char(c2[i2 + i], CHARTYPE.CHAR)
 					curr.add_child(a)
 					curr = a
 				else:
@@ -224,7 +245,7 @@ def compare_pass(candidates):
 			for i in range (0, p3 + 1):
 				child = curr.get_child(c3[i3 + i])
 				if child == None:
-					a = util.Char(c3[i3 + i], util.CHARTYPE.CHAR)
+					a = Char(c3[i3 + i], CHARTYPE.CHAR)
 					curr.add_child(a)
 					curr = a
 				else:
@@ -233,7 +254,7 @@ def compare_pass(candidates):
 			for i in range (0, p4 + 1):
 				child = curr.get_child(c4[i4 + i])
 				if child == None:
-					a = util.Char(c4[i4 + i], util.CHARTYPE.CHAR)
+					a = Char(c4[i4 + i], CHARTYPE.CHAR)
 					curr.add_child(a)
 					curr = a
 				else:
@@ -255,8 +276,8 @@ def to_line(line, candidates):
 		char_list = compare_pass((c1[i], c2[i], c3[i], c4[i]))
 		l = l + char_list
 		if i != length - 1:
-			l.append(util.Char(None, util.CHARTYPE.BLANK))
-	return util.Line(line, l)
+			l.append(Char(None, CHARTYPE.BLANK))
+	return Line(line, l)
 
 # Given a paragraph image, constructs a paragraph class
 def to_paragraph(para):
@@ -266,7 +287,7 @@ def to_paragraph(para):
 	for i in range (0, length):
 		line = to_line(para[i], (c1[i], c2[i], c3[i], c4[i]))	
 		l.append(line)
-	return util.Paragraph(l)
+	return Paragraph(l)
 
 # reconst 모듈로 넘겨줄 paragraph list를 생성
 def get_graphs(img):
@@ -277,4 +298,6 @@ def get_graphs(img):
 		para = to_paragraph(essay[i])
 		l.append(para)
 	return l
-get_graphs(im_bw)
+
+if __name__ == "__main__":
+	run_direct()

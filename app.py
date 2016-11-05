@@ -9,7 +9,7 @@ import numpy as np
 import preproc
 import detection
 import chrecog
-chrecog.load_ckpt("data/only_valid_160930.ckpt")
+chrecog.load_ckpt("data/161020.ckpt")
 import reconst
 
 app = Flask(__name__)

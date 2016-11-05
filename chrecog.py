@@ -4,19 +4,7 @@
 import tensorflow as tf
 import numpy as np
 from hangul_utils import join_jamos_char
-
-en_chset = []
-en_chset.extend(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"])
-en_chset.extend(["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n",\
-              "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"])
-en_chset.extend(["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N",\
-              "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"])
-en_chset.extend(["(", ")", "'", "\"", ".", ",", ":", ";", "!", "?", "/", "@", "#", "$",\
-              "%", "^", "&", "*", "[", "]", "{", "}", "<", ">", "~", "-"])
-
-ko_chset_cho = ["ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"]
-ko_chset_jung = ["ㅏ", "ㅐ", "ㅑ", "ㅒ", "ㅓ", "ㅔ", "ㅕ", "ㅖ", "ㅗ", "ㅘ", "ㅙ", "ㅚ", "ㅛ", "ㅜ", "ㅝ", "ㅞ", "ㅟ", "ㅠ", "ㅡ", "ㅢ", "ㅣ"]
-ko_chset_jong = ["X", "ㄱ", "ㄲ", "ㄳ", "ㄴ", "ㄵ", "ㄶ", "ㄷ", "ㄹ", "ㄺ", "ㄻ", "ㄼ", "ㄽ", "ㄾ", "ㄿ", "ㅀ", "ㅁ", "ㅂ", "ㅄ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"]
+from data import en_chset, ko_chset_cho, ko_chset_jung, ko_chset_jong
 
 #################
     
@@ -52,6 +40,8 @@ def slice_label(tf_label, len_tuple):
 
 ################
 
+Y_size = len(ko_chset_cho)+len(ko_chset_jung)+len(ko_chset_jong)+len(en_chset)+4 
+
 tf.reset_default_graph()
 X = tf.placeholder(tf.float32, [None, 32, 32])
 keep_prob = tf.placeholder(tf.float32)
@@ -81,7 +71,7 @@ cnn_3_pool = max2d_pool(cnn_3_concat) # 4 * 4 * 192
 dense_1 = tf.nn.relu(build_nn(1024, flatten_cnn(cnn_3_pool), "dense_1"))
 dropout_1 = tf.nn.dropout(dense_1, keep_prob)
 
-logit = build_nn(160, dropout_1, "logit")
+logit = build_nn(Y_size, dropout_1, "logit")
 logit_cho, logit_jung, logit_jong, logit_en = slice_label(logit,
                                          (len(ko_chset_cho)+1,
                                          len(ko_chset_jung)+1,

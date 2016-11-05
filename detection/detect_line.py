@@ -1,14 +1,15 @@
 from __future__ import division
 import cv2
 import numpy as np
-import util
+from util import *
 
-# Implemented for testing; get img and change it to grayscale
-#original_img = cv2.imread('test/line_testing/test2.png')
-#grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
+#if __name__ == '__main__':
+	# Implemented for testing; get img and change it to grayscale
+	#original_img = cv2.imread('test/line_testing/test2.png')
+	#grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 
-# Implemented for testing; change img to black & white
-#(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+	# Implemented for testing; change img to black & white
+	#(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
 #(x, y) = im_bw.shape
 
@@ -19,7 +20,7 @@ def find_line(img):
 	trunc_row = []
 	(row, _) = img.shape
 	for i in range (0, row):
-		sum = util.sumup_row(img, i)
+		sum = sumup_row(img, i)
 		if sum >= 2 and start_idx == -1:
 			start_idx = i
 		elif (sum < 2 and start_idx == -1) or sum > 0:
@@ -50,7 +51,7 @@ def get_line_imgs(img, trunc_row):
 	line_imgs = []
 	l = len(trunc_row)
 	for i in range (0, l):
-		line_imgs.append(util.trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
+		line_imgs.append(trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
 	return line_imgs
 
 # Implemented for testing; saves line images by paragraph and line number
