@@ -158,13 +158,14 @@ def remove_border(contour, edges):
 # Dilate using an NxN [+] sign shape
 def expand_image(edges, N, iterations): 
     arr = numpy.zeros((N,N), dtype=numpy.uint8)
-    arr[(N-1)/2,:] = 1
+    half = int((N-1)/2)
+    arr[half,:] = 1
     expanded_image = cv2.dilate(edges / 255, arr, iterations=iterations)
 
     arr = numpy.zeros((N,N), dtype=numpy.uint8)
-    arr[:,(N-1)/2] = 1
+    arr[:,half] = 1
     expanded_image = cv2.dilate(expanded_image, arr, iterations=iterations)
-    return expanded_image
+    return 255 * (expanded_image > 0).astype(numpy.uint8)
 
 '''
 ' name: find_connected_components
@@ -178,8 +179,8 @@ def find_connected_components(edges):
     count = 21
     while count > 16:
         n += 1
-        expanded_image = expand_image(edges, N=3, iterations=n)
-        contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        expanded_image = expand_image(edges, N=3, iterations=n) * 255
+        _, contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         count = len(contours)
     #Image.fromarray(edges).show()
     #Image.fromarray(255 * expanded_image).show()
@@ -288,9 +289,9 @@ def preprocess_image(path, out_path):
     #gray_img = cv2.cvtColor(arr_img ,cv2.COLOR_BGR2GRAY, gray_img)
     edges = cv2.Canny(shrink_arr, 100, 200)
 
-    contours,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _,contours,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     borders = lookup_borders(contours, edges)
-    borders.sort(key=lambda (i, x1, y1, x2, y2): (x2 - x1) * (y2 - y1))
+    borders.sort(key=(lambda i, x1, y1, x2, y2: (x2 - x1) * (y2 - y1)))
 
     border_contour = None
     if len(borders):
@@ -306,10 +307,10 @@ def preprocess_image(path, out_path):
     debordered = numpy.minimum(numpy.minimum(edges, maxed_rows), maxed_cols)
     edges = debordered
 
-    print 'input file: %s' % (path)
+    print ('input file: %s' % (path))
     contours = find_connected_components(edges)
     if len(contours) == 0:
-        print '    -> There is no text in the image.'
+        print ('    -> There is no text in the image.')
         return
 
     #print contours
@@ -333,22 +334,22 @@ def preprocess_image(path, out_path):
         outfname = '{}_{}.png'.format(out_path, i)
         cv2.imwrite(outfname, binary_img)
         
-        print '    -> %s' % (outfname)
+        print ('    -> %s' % (outfname))
         
 
-if __name__ == '__main__':
-        '''
-	path = 'rec_sample_2.jpg'
-	outpath = 'rec_crpped_0.png'
-	preprocess_image(path, outpath)
-	'''
-	if len(sys.argv) != 2:
-		print("usage: python Preprocessing.py <path-to-image>")
-	else:
-		path = sys.argv[1]
-		out_path = path[:-4]
-		out_path = out_path + '_crop.png'
-		preprocess_image(path, out_path)
+if __name__ == '__main__' :
+    '''
+    path = 'rec_sample_2.jpg'
+    outpath = 'rec_crpped_0.png'
+    preprocess_image(path, outpath)
+    '''
+    if len(sys.argv) != 2 :
+        print("usage: python Preprocessing.py <path-to-image>")
+    else :
+        path = sys.argv[1]
+        out_path = path[:-4]
+        out_path = out_path + '_crop.png'
+        preprocess_image(path, out_path)
 
 """
     if len(sys.argv) == 2 and '*' in sys.argv[1]:
