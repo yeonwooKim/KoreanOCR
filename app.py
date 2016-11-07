@@ -11,6 +11,7 @@ import detection
 from chrecog.predict import get_session, load_ckpt
 import reconst
 import semantic
+from time import strftime
 
 
 sess = get_session()
@@ -31,11 +32,15 @@ def sizeof_fmt(num, suffix='B'):
 # 이미지를 각 모듈에 순서대로 넘겨줌
 # 분석된 최종 문자열을 반환
 def analysis(f):
+    print (strftime("%Y-%m-%d %H:%M:%S") + " preprocessing..");
     processed_imgs = preprocessing.preprocess_image(f)
+    print (strftime("%Y-%m-%d %H:%M:%S") + " detecting..");
     graphs = []
     for processed in processed_imgs:
         graphs.extend(detection.get_graphs(processed))
+    print (strftime("%Y-%m-%d %H:%M:%S") + " semaintic..");
     result = semantic.analyze(graphs)
+    print (strftime("%Y-%m-%d %H:%M:%S") + " reconst..");
     return reconst.build_graphs(result)
 
 # 프론트엔드 index
