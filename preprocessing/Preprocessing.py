@@ -179,7 +179,7 @@ def find_connected_components(edges):
     count = 21
     while count > 16:
         n += 1
-        expanded_image = expand_image(edges, N=3, iterations=n) * 255
+        expanded_image = expand_image(edges, N=3, iterations=n)
         _, contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         count = len(contours)
     #Image.fromarray(edges).show()
