@@ -243,7 +243,7 @@ def open_image(path):
     # solve auto-rotated problem after Image.open()
     for orientation in ExifTags.TAGS.keys() : 
         if ExifTags.TAGS[orientation]=='Orientation' : break 
-    if (image._getexif() == None):
+    if (not hasattr(image, "_getexif") or image._getexif() == None):
         return image;
     exif=dict(image._getexif().items())
 
@@ -278,7 +278,7 @@ def shrink_image(image):
 ' input: path to load image from, path to store image to
 ' output: None
 '''
-def preprocess_image(path, out_path):
+def preprocess_image(path):
     #denoised_img = denoising(arr_img)
     #binary_img = thresholding(denoised_img)
     original_image = open_image(path)
@@ -316,6 +316,7 @@ def preprocess_image(path, out_path):
     #print contours
 
     # 2016-10-15 mjkim. handle multiple text areas
+    imgs = []
     boxes = find_optimal_bounding_boxes(contours, edges)
     for i, rect in enumerate(boxes):
         # make cutting image from original 
@@ -331,9 +332,15 @@ def preprocess_image(path, out_path):
         #text_arr = text_arr.reshape((height, width, 3))
         denoised_img = denoising(text_arr)
         binary_img = thresholding(denoised_img)
-        outfname = '{}_{}.png'.format(out_path, i)
-        cv2.imwrite(outfname, binary_img)
+        imgs.append(binary_img)
+    return imgs
         
+        
+def save_imgs(imgs, out_path):
+    for i, img in enumerate(imgs):
+        outfname = '{}_{}.png'.format(out_path, i)
+        cv2.imwrite(outfname, img)
+
         print ('    -> %s' % (outfname))
         
 
@@ -349,7 +356,8 @@ if __name__ == '__main__' :
         path = sys.argv[1]
         out_path = path[:-4]
         out_path = out_path + '_crop.png'
-        preprocess_image(path, out_path)
+        imgs = preprocess_image(path)
+        save_imgs(imgs, out_path)
 
 """
     if len(sys.argv) == 2 and '*' in sys.argv[1]:

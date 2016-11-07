@@ -1,1 +1,1 @@
-from preprocessing import preprocess_image
+from preprocessing.preprocessing import preprocess_image

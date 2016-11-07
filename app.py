@@ -6,7 +6,7 @@ from flask import Flask, render_template, request
 import cv2
 import numpy as np
 
-import preproc
+import preprocessing
 import detection
 from chrecog.predict import get_session, load_ckpt
 import reconst
@@ -30,9 +30,11 @@ def sizeof_fmt(num, suffix='B'):
 
 # 이미지를 각 모듈에 순서대로 넘겨줌
 # 분석된 최종 문자열을 반환
-def analysis(img):
-    processed = preproc.process(img)
-    graphs = detection.get_graphs(processed)
+def analysis(f):
+    processed_imgs = preprocessing.preprocess_image(f)
+    graphs = []
+    for processed in processed_imgs:
+        graphs.extend(detection.get_graphs(processed))
     result = semantic.analyze(graphs)
     return reconst.build_graphs(result)
 
@@ -50,12 +52,12 @@ def view_upload():
     f = request.files['image']
     blob = f.read()
     size = len(blob)
-    blob_array = np.asarray(bytearray(blob), dtype=np.uint8)
-    img = cv2.imdecode(blob_array, 0) # 이미지를 디코드 후 numpy array로 변환
-    analyzed = analysis(img)
+    #blob_array = np.asarray(bytearray(blob), dtype=np.uint8)
+    #img = cv2.imdecode(blob_array, 0) # 이미지를 디코드 후 numpy array로 변환
+    analyzed = analysis(f)
     ret = ( "name : %s\n" % f.filename +
             "size : %s\n" % sizeof_fmt(size) +
-            "dimension : %d X %d\n" % (img.shape[1], img.shape[0]) +
+            #dimension : %d X %d\n" % (img.shape[1], img.shape[0]) +
             "\n<Analysis>\n%s" % analyzed)
     return ret
 
