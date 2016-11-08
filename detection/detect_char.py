@@ -125,24 +125,6 @@ def snd_pass(line, size, candidate, merge_thdl, merge_thdh):
 		snd_word = []
 	return snd_candidate
 
-# Reshape narrow letters to 32 X 32
-# without modifying ratio
-def reshape_with_margin(img, size=32, pad=4):
-	if img.shape[0] > img.shape[1] :
-		dim = img.shape[0]
-		margin = (dim - img.shape[1])//2
-		margin_img = np.zeros([dim, margin])
-		reshaped = np.c_[margin_img, img, margin_img]
-	else :
-		dim = img.shape[1]
-		margin = (dim - img.shape[0])//2
-		margin_img = np.zeros([margin, dim])
-		reshaped = np.r_[margin_img, img, margin_img]
-	reshaped = cv2.resize(reshaped, (size-pad*2, size-pad*2))
-	padded = np.zeros([size, size])
-	padded[pad:-pad, pad:-pad] = reshaped
-	return padded
-
 # Given a paragraph, processes 2 times and returns the candidate word points
 def proc_paragraph(para):
 	fst_candidate = []
@@ -268,14 +250,55 @@ def compare_pass(candidates):
 		i4 = i4 + p4 + 1
 	return char_list
 
+def argmin(items):
+	min_idxs = []
+	min_elm = float("inf")
+	for idx, elm in enumerate(items):
+		if min_elm > elm:
+			min_idxs = [idx]
+			min_elm = elm
+		elif min_elm == elm:
+			min_idxs.append(idx)
+	return min_idxs, min_elm
+
+def compare_pass_single_depth(candidates):
+	char_list = []
+	indexes = [0 for cnd in candidates] 		# cursors of each candidates
+	lens = [len(cnd) for cnd in candidates] 	# lengths of each candidates
+	splits = [] 								# split points for this 'not yet splited' char
+	while (True):
+		for i in range(len(indexes)):								# if some cursors out of range, return
+			if (indexes[i] >= lens[i]):
+				return char_list
+
+		start = min([cnd[idx][0] for idx, cnd in zip(indexes, candidates)]) # The minimum point of each splits
+		ends = [cnd[idx][1] for idx, cnd in zip(indexes, candidates)] 		# End points of each splits
+
+		if ends.count(ends[0]) == len(ends):								# If all ends equal
+			char = Char((start, ends[0]), CHARTYPE.CHAR)
+			prev = start
+			if len(splits) > 0:
+				splits.append(ends[0])
+			for split in splits:											# append each split point as child
+				char.children.append(Char((prev, split), CHARTYPE.CHAR))
+				prev = split
+			splits = []
+			char_list.append(char)
+			for i in range(len(indexes)):
+				indexes[i] += 1
+		else :
+			min_end_idxs, min_end = argmin(ends)							# Find which candidate has minimum end
+			splits.append(min_end)											# Add split poiint
+			for idx in min_end_idxs:
+				indexes[idx] += 1
+
 # Truncates line image to letters and constructs line classes
-# Resizes char images to 32 * 32
 def to_line(line, candidates):
 	l = []
 	(c1, c2, c3, c4) = candidates
 	length = len(c1)
 	for i in range (0, length):
-		char_list = compare_pass((c1[i], c2[i], c3[i], c4[i]))
+		char_list = compare_pass_single_depth((c1[i], c2[i], c3[i], c4[i]))
 		l = l + char_list
 		if i != length - 1:
 			l.append(Char(None, CHARTYPE.BLANK))

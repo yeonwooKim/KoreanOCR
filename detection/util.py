@@ -6,6 +6,7 @@ class Paragraph:
 
 class Line:
 	def __init__(self, img, chars):
+		self.img = img
 		self.chars = chars
 
 class CHARTYPE(Enum):
