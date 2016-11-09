@@ -59,7 +59,7 @@ def get_label(index_data):
     for i, member in enumerate(index_data):
         target = member['target'] # Target Character
         # Is Hangeul?
-        if (check_syllable(target)):
+        if (len(target) == 1 and check_syllable(target)):
             splited = split_syllable_char(target)
             label_ko_cho[i][ko_chset_cho.index(splited[0])] = 1
             label_ko_jung[i][ko_chset_jung.index(splited[1])] = 1
