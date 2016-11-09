@@ -1,7 +1,13 @@
 import sys, getopt
 from data import en_chset
 from data.gen import get_mat, slice_img, save_chset_random, get_unavailable, supported_fonts, supported_weights
-import matplotlib.pyplot as plt
+import matplotlib
+plot_disabled = False
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    print("plt import error : plot disabled")
+    plot_disabled = True
 import itertools
 import random
 import math
@@ -9,6 +15,7 @@ import math
 msg_help = """python data_gen.py <save path>
 -h (help)
 -f (do not ask)
+-r (clear matplotlib font cache)
 -s <number of data>
 --noplot (do not show plot)"""
 
@@ -21,9 +28,10 @@ def main(argv):
     save_path = None
     datasize = 300000
     force = False
+    refresh = False
     plot = True
     try:
-        opts, args = getopt.gnu_getopt(argv,"hfs:",["help","force","size=","noplot"])
+        opts, args = getopt.gnu_getopt(argv,"hfrs:",["help","force","refresh","size=","noplot"])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(-1)
@@ -35,15 +43,20 @@ def main(argv):
             force = True
         elif opt in ("-s", "--size"):
             datasize = int(arg)
+        elif opt in ("-r", "--refresh"):
+            refresh = True
         elif opt == "--noplot":
             plot = False
             
     if len(args) != 1 or datasize <= 0:
         print(msg_help)
         sys.exit(-1)
+
+    if refresh:
+        matplotlib.font_manager._rebuild()
     
     save_path = args[0]
-    generate_fonts(save_path, datasize, plot, force)
+    generate_fonts(save_path, datasize, plot and not plot_disabled, force)
 
 def get_random_ch(chset=all_chset):
     return chset[random.randrange(0,len(chset))]
@@ -85,7 +98,10 @@ def generate_fonts(save_path, datasize, plot, force=False):
         for str in unavailable:
             print("%s not found" % str)
             fonts.remove(str)
-        print("Please provide above fonts.")
+        print("========")
+        print("Please provide above fonts. After you install new ones,")
+        print("make sure you run fc-cache -f -v then run with option -r")
+        print("to clear the matplotlib cache\n")
     print("==Target fonts==")
     for font in fonts:
         print(font)
