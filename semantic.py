@@ -38,6 +38,11 @@ def kill_bad_children(clist):
                 c.children = []
                 break;
 
+def consume_children(c):
+    c.prob = min([child.prob for child in c.children])
+    c.value = ''.join([child.value for child in c.children])
+    c.children = []
+
 def kill_bad_parent(clist):
     if len(clist) == 0:
         return
@@ -46,17 +51,15 @@ def kill_bad_parent(clist):
         if len(c.children) == 0:
             continue
         kill_bad_parent(c.children)
-        if c.value == '':
-            c.value = ''.join([child.value for child in c.children])
-            c.children = []
+        if c.value == '' or (c.prob < min([child.prob for child in c.children]) - 0.1):
+            consume_children(c)
 
 # 마침표나 쉽표로 나눌 만한 건 나누자
 def split_periods(clist):
     for c in clist:
         if len(c.children) == 2:
             if c.children[1].value == '.' or c.children[1].value == ',':
-                c.value = ''.join([child.value for child in c.children])
-                c.children = []
+                 consume_children(c)
 
 def merge_with_sibiling(clist):
     prev = None
@@ -68,6 +71,14 @@ def merge_with_sibiling(clist):
             prev.value = ''
             c.value = '"'
         prev = c
+
+def analyze_pedigree(clist):
+    kill_bad_children(clist)
+    kill_bad_parent(clist)
+
+def analyze_linear(clist):
+    merge_with_sibiling(clist)
+    split_periods(clist)
 
 def analyze(graphs):
     len_l = 0
@@ -82,10 +93,8 @@ def analyze(graphs):
             #plt.subplot(len_l,1, i_l+1)
             #plt.imshow(l.img)
             analyze_recur(l.chars)
-            #kill_bad_children(l.chars)
-            #kill_bad_parent(l.chars)
-            #merge_with_sibiling(l.chars)
-            #split_periods(l.chars)
+            analyze_pedigree(l.chars)
+            analyze_linear(l.chars)
             print_recur(i_l, 0, l.chars, True)
             i_l+=1
     #plt.show()
