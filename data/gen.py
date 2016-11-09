@@ -6,13 +6,22 @@ import io
 import random
 import cairocffi as cairo
 from scipy.ndimage import imread
+from matplotlib import font_manager
 from matplotlib.image import imsave
 from scipy.misc import imresize
 from PIL import Image
 
-fonts = ["NanumMyeongjo", "NanumGothic", "Gungsuh", "Batang", "Dotum", "SM SSMyungJo Std", "Gulim",
+supported_fonts = ["NanumMyeongjo", "NanumGothic", "Gungsuh", "Batang", "Dotum", "SM SSMyungJo Std", "Gulim",
          "NanumGothicCoding"]
-weights = ["NORMAL", "BOLD"]
+supported_weights = ["NORMAL", "BOLD"]
+
+def get_unavailable(fonts):
+    available_fonts = {f.name for f in font_manager.fontManager.ttflist}
+    ret = []
+    for font in fonts:
+        if font not in available_fonts:
+            ret.append(font)
+    return ret
 
 WIDTH, HEIGHT = 96, 96
 surface = cairo.ImageSurface (cairo.FORMAT_RGB24, WIDTH, HEIGHT)
@@ -35,6 +44,12 @@ def rgb2gray(rgb):
 
 # Generate 64 X 64 image
 def generate_mat(target, font, weight="NORMAL"):
+    if font not in supported_fonts:
+        print("Unsupported font %s" % font)
+        exit(-1)
+    if weight not in supported_weights:
+        print("Unsupported weight %s" % weight)
+        exit(-1)
     
     if weight == "BOLD":
         weight = cairo.FONT_WEIGHT_BOLD
@@ -85,12 +100,6 @@ def generate_mat(target, font, weight="NORMAL"):
 
 def get_mat(target, font=None, weight=None):
     global mat
-    
-    if font is None:
-        font = random.choice(fonts)
-        
-    if weight is None:
-        weight = random.choice(weights)
         
     if font == "Gungsuh" and weight == "BOLD":
         weight = "NORMAL"
@@ -127,9 +136,9 @@ def slice_img(mat):
     sliced = mat[y_start:y_end, x_start:x_end]
     return imresize(sliced, [32, 32])
 
-print ("function loaded")
-
-def save_chset_random(chsets, chws, path, num):
+def save_chset_random(fonts, weights, chsets, chws, path, num):
+    assert len(fonts) > 0
+    assert len(weights) > 0
     print ("saving into %s..." % path)
     index_data = []
 
