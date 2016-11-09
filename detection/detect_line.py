@@ -11,7 +11,7 @@ from util import *
 	# Implemented for testing; change img to black & white
 	#(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 
-	#(x, y) = im_bw.shape
+#(x, y) = im_bw.shape
 
 # Finds the lines that contain text and
 # Return them as a list of tuples that indicate the location of starting and ending pt of each line
@@ -21,15 +21,15 @@ def find_line(img):
 	(row, _) = img.shape
 	for i in range (0, row):
 		sum = sumup_row(img, i)
-		if sum > 0 and start_idx == -1:
+		if sum >= 2 and start_idx == -1:
 			start_idx = i
-		elif (sum == 0 and start_idx == -1) or sum > 0:
+		elif (sum < 2 and start_idx == -1) or sum > 0:
 			continue
-		elif sum == 0 and start_idx >= 0:
+		elif sum < 2 and start_idx >= 0:
 			end_idx = i
 			if end_idx - start_idx >= 2:
 				trunc_row.append((start_idx, end_idx))
-			start_idx, end_dix = -1, -1
+			start_idx, end_idx = -1, -1
 
 	return trunc_row
 
@@ -40,32 +40,10 @@ def label_paragraph(trunc_row):
 	length = len(trunc_row)
 	for i in range (0, length - 1):
 		label.append(num)
-		if trunc_row[i + 1][0] - trunc_row[i][1] > 20:
+		if trunc_row[i + 1][0] - trunc_row[i][1] > 10:
 			num = num + 1
 	label.append(num)
 	return (num + 1, label)
-
-# Trims line images
-def trim_line(img):
-	(x, y) = img.shape
-	fst, lst = -1, -1
-	for i in range (0, y):
-		sum = sumup_col(img, i)
-		if sum > 0:
-			fst = i
-			break
-	for i in range (0, y):
-		sum = sumup_col(img, y - 1 - i)
-		if sum > 0:
-			lst = y - 1 - i
-			break
-	if fst < 10 and lst >= y - 10:
-		return img
-	elif fst < 10:
-		return img[0:x, 0:lst + 10]
-	elif lst >= y - 10:
-		return img[0:x, fst - 10:y]
-	return img[0:x, fst - 10:lst + 10]
 
 # Truncates the imgs to line imgs
 # Returns list of img objects
@@ -126,7 +104,7 @@ def save_line_imgs(img, trunc_row):
 # If executed directly
 if __name__ == '__main__':
 	# get img and change it to grayscale
-	original_img = cv2.imread('test/test.png')
+	original_img = cv2.imread('test/line_testing/test.png')
 	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 
 	# change img to black & white

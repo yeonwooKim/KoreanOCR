@@ -9,5 +9,5 @@ def build_graphs(graphs):
             for c in l.chars:
                 output += c.value
             output += "\n"
-        output += "====\n"
+        #output += "====\n"
     return output
