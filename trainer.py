@@ -1,11 +1,11 @@
 import sys, getopt, tarfile
 
-msg_help = """python trainer.py
--i <tar data>
--o <path to save>
--e <epoch to train>
--b <mini batch size>
--v"""
+msg_help = """python trainer.py <tar data>
+-o <path to save ckpt>
+-e <epoch to train, default 4>
+-b <mini batch size, default 200>
+-v (verbose output)
+-p (show progress using carriage return)"""
 
 def train(data_path, save_path, max_epoch=4, batchsize=100, prog=False, stat=False):
     import data
@@ -29,7 +29,7 @@ def main(argv):
     prog = False
     stat = False
     try:
-        opts, args = getopt.getopt(argv,"hpvi:o:e:b:",["progress","verbose","input=","output=","epoch=","batch="])
+        opts, args = getopt.gnu_getopt(argv,"hpvi:o:e:b:",["progress","verbose","input=","output=","epoch=","batch="])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
@@ -49,7 +49,13 @@ def main(argv):
             max_epoch = int(arg)
         elif opt in ("-b", "--batch"):
             batchsize = int(arg)
-            
+    
+    if len(args) != 1:
+        print(msg_help)
+        sys.exit(2)
+    
+    data_path = args[0]
+    
     if data_path is None or save_path is None:
         print(msg_help)
         sys.exit(2)
