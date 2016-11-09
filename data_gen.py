@@ -1,6 +1,9 @@
+# data_gen.py
+# Used to generate composite data
+# python data_gen.py --help
+
 import sys, getopt
-from data import en_chset
-from data.gen import get_mat, slice_img, save_chset_random, get_unavailable, supported_fonts, supported_weights
+from data import en_chset, gen
 import matplotlib
 plot_disabled = False
 try:
@@ -14,8 +17,8 @@ import math
 
 msg_help = """python data_gen.py <save path>
 -h (help)
--f (do not ask)
--r (clear matplotlib font cache)
+-f (do not ask to proceed)
+-r (refresh system font cache)
 -s <number of data>
 --noplot (do not show plot)"""
 
@@ -53,7 +56,8 @@ def main(argv):
         sys.exit(-1)
 
     if refresh:
-        matplotlib.font_manager._rebuild()
+        print("Refreshing font cache...")
+        gen.refresh_font_cache()
     
     save_path = args[0]
     generate_fonts(save_path, datasize, plot and not plot_disabled, force)
@@ -73,15 +77,18 @@ def draw_subplot(array, w, h):
 def show_example_all(ch, fonts, weights):
     sliced = []
     for font, weight in itertools.product(fonts, weights):
-        sliced.append(slice_img(get_mat(ch, font, weight)))
+        mat = gen.get_mat(ch, font, weight)
+        if mat is None:
+            continue
+        sliced.append(gen.slice_img(mat))
     draw_subplot(sliced, math.ceil(len(sliced)/2), 2)
     
 def show_example(ch):
-    sliced = [slice_img(get_mat(ch)) for i in range(7)]
+    sliced = [gen.slice_img(gen.get_mat(ch)) for i in range(7)]
     draw_subplot(sliced, 1, 7)
     
 def show_example_random():
-    sliced = [slice_img(get_mat(get_random_ch())) for i in range(7)]
+    sliced = [gen.slice_img(gen.get_mat(get_random_ch())) for i in range(7)]
     draw_subplot(sliced, 1, 7)
     
 #for ch in ".", ";", "2", ")", "가", "낢", "·", "《", "》", "「", "」", "『", "』" :
@@ -91,26 +98,27 @@ def show_example_random():
 #    show_example_random()
 
 def generate_fonts(save_path, datasize, plot, force=False):
-    fonts = supported_fonts[:]
-    weights = supported_weights[:]
-    unavailable = get_unavailable(fonts)
+    fonts = gen.supported_fonts[:]
+    weights = gen.supported_weights[:]
+    unavailable = gen.get_unavailable(fonts)
     if (len(unavailable)):
         for str in unavailable:
             print("%s not found" % str)
             fonts.remove(str)
         print("========")
         print("Please provide above fonts. After you install new ones,")
-        print("make sure you run fc-cache -f -v then run with option -r")
-        print("to clear the matplotlib cache\n")
+        print("make sure you run fc-cache -f -v or run with option -r,")
+        print("which would do fc-cache for you.")
     print("==Target fonts==")
     for font in fonts:
         print(font)
     if plot:
         show_example_all("낡", fonts, weights)
+        plt.show()
     print("================")
     if (force or input("Are you sure to proceed? (y/n)") == "y"):
         print("Proceeding..")
-        save_chset_random(fonts, weights, (en_chset, ko_chset), (1, 3), save_path, datasize)
+        gen.save_chset_random(fonts, weights, (en_chset, ko_chset), (10, 30, 1), save_path, datasize)
     else:
         print("Aborting..")
         

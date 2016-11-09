@@ -6,17 +6,42 @@ import io
 import random
 import cairocffi as cairo
 from scipy.ndimage import imread
-from matplotlib import font_manager
 from matplotlib.image import imsave
 from scipy.misc import imresize
 from PIL import Image
+import subprocess
+from data import en_chset
 
 supported_fonts = ["NanumMyeongjo", "NanumGothic", "Gungsuh", "Batang", "Dotum", "SM SSMyungJo Std", "Gulim",
-         "NanumGothicCoding"]
+         "NanumGothicCoding", "DejaVu Sans", "DejaVu Sans Mono"]
 supported_weights = ["NORMAL", "BOLD"]
 
+unsupported_en = dict()
+unsupported_kr = dict()
+unsupported_weight = dict()
+for font in supported_fonts:
+    unsupported_en[font] = {}
+    unsupported_kr[font] = False
+    unsupported_weight[font] = {}
+
+unsupported_en["NanumGothicCoding"] = {"·"}
+unsupported_en["SM SSMyungJo Std"] = {"·"}
+unsupported_en["DejaVu Sans"] = {"「", "」", "『", "』", "《", "》", "·"}
+unsupported_en["DejaVu Sans Mono"] = {"「", "」", "『", "』", "《", "》", "·"}
+
+unsupported_kr["DejaVu Sans"] = True
+unsupported_kr["DejaVu Sans Mono"] = True
+
+unsupported_weight["Gungsuh"] = "BOLD"
+
+def refresh_font_cache():
+    subprocess.run("fc-cache -f -v", shell=True)
+
 def get_unavailable(fonts):
-    available_fonts = {f.name for f in font_manager.fontManager.ttflist}
+    p = subprocess.Popen('fc-list -f "%{family}\n"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    p.wait()
+    lines = p.stdout.read().splitlines()
+    available_fonts = { line.decode("utf-8").split(',')[0] for line in lines }
     ret = []
     for font in fonts:
         if font not in available_fonts:
@@ -28,7 +53,7 @@ surface = cairo.ImageSurface (cairo.FORMAT_RGB24, WIDTH, HEIGHT)
 ctx = cairo.Context (surface)
 ctx.set_font_size(45)
 
-mat = dict()
+__mat = dict()
 
 def get_text_dim(text):
     extent = ctx.text_extents(text)
@@ -99,25 +124,33 @@ def generate_mat(target, font, weight="NORMAL"):
     return rgb2gray(new_mat)
 
 def get_mat(target, font=None, weight=None):
-    global mat
-        
-    if font == "Gungsuh" and weight == "BOLD":
-        weight = "NORMAL"
-        
-    if font == "SM SSMyungJo Std" or font == "NanumGothicCoding" and target =="·":
-        font = "NanumMyeongjo"
+    global __mat
     
-    if not font in mat :
-        mat[font] = dict()
+    if font is None:
+        font = random.choice(supported_fonts)
+    if weight is None:
+        weight = random.choice(supported_weights)
+
+    if target in unsupported_en[font]:
+        return None
     
-    if not weight in mat[font] :
-        mat[font][weight] = dict()
+    if len(target) == 1 and (target not in en_chset) and unsupported_kr[font]:
+        return None
+    
+    if weight in unsupported_weight[font]:
+        return None
+    
+    if not font in __mat :
+        __mat[font] = dict()
+    
+    if not weight in __mat[font] :
+        __mat[font][weight] = dict()
         
-    if target in mat[font][weight] :
-        return mat[font][weight][target]
+    if target in __mat[font][weight] :
+        return __mat[font][weight][target]
     
-    mat[font][weight][target] = generate_mat(target, font, weight)
-    return mat[font][weight][target]
+    __mat[font][weight][target] = generate_mat(target, font, weight)
+    return __mat[font][weight][target]
 
 # Slice a target character from 96 X 96
 # with sizing and etc.
@@ -136,10 +169,30 @@ def slice_img(mat):
     sliced = mat[y_start:y_end, x_start:x_end]
     return imresize(sliced, [32, 32])
 
+#def add_noise(mat):
+#    salted = mat - 255 * np.floor(np.clip(np.random.randn(*mat.shape) - 1, 0, 1))
+#    return salted
+
+
+def get_inval_char():
+    i = random.randrange(0,5)
+    if i < 2 :
+        return get_inval_num()
+    elif i < 4:
+        return get_inval_al()
+    else :
+        return " "
+
+def get_inval_num():
+    return random.choice(en_chset[:10]) + random.choice(en_chset[:10])
+
+def get_inval_al():
+    return random.choice(en_chset[10:62]) + random.choice(en_chset[10:62])
+
 def save_chset_random(fonts, weights, chsets, chws, path, num):
     assert len(fonts) > 0
     assert len(weights) > 0
-    print ("saving into %s..." % path)
+    print ("saving %d into %s..." % (num, path))
     index_data = []
 
     tar = tarfile.open(path, "w|gz")
@@ -150,23 +203,31 @@ def save_chset_random(fonts, weights, chsets, chws, path, num):
         chw_sum += chws[i]
         chws[i] = chw_sum
     
-    for i in range(num):
-        while True:
-            font = random.choice(fonts)
-            weight = random.choice(weights)
-            if font != "Gungsuh" or weight != "BOLD":
-                break
+    i = 0
+    while i < num:
+        font = random.choice(fonts)
+        weight = random.choice(weights)
                 
+        ch = None
         ch_ran = random.uniform(0, chw_sum)
-        for i, chset in enumerate(chsets):
-            if (ch_ran < chws[i]):
+        for j, chset in enumerate(chsets):
+            if (ch_ran < chws[j]):
                 ch = random.choice(chset)
                 break
+
+        if ch is None:
+            ch = get_inval_char()
             
-        if len(index_data) % 10000 == 0:
-            print ("saving %7dth data...\r" % (len(index_data)+1))
-        pathname = "%07d.png" % len(index_data)
-        sliced = slice_img(get_mat(ch, font, weight))
+        if i % 10000 == 0:
+            print ("saving %7dth data...\r" % (i+1))
+        pathname = "%07d.png" % i
+        mat = get_mat(ch, font, weight)
+        # The font, weight and character combination not supported
+        while mat is None:
+            font = random.choice(fonts) 
+            mat = get_mat(ch, font, weight)
+
+        sliced = slice_img(mat)
         ft = io.BytesIO()
         Image.fromarray(sliced, mode='L').save(ft, format="PNG", optimize=True, compress_level=9)
         index_data.append({'path': pathname, 'font': font, 'weight': weight, 'target': ch})
@@ -179,6 +240,7 @@ def save_chset_random(fonts, weights, chsets, chws, path, num):
         ft.seek(0)
         tar.addfile(ti, ft)
         ft.close()
+        i+=1
     
     ti = tarfile.TarInfo("index.json")
     ft = io.BytesIO()

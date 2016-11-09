@@ -61,7 +61,6 @@ def get_label(index_data):
         # Is Hangeul?
         if (check_syllable(target)):
             splited = split_syllable_char(target)
-            label_en[i][len(en_chset)] = 1
             label_ko_cho[i][ko_chset_cho.index(splited[0])] = 1
             label_ko_jung[i][ko_chset_jung.index(splited[1])] = 1
             if len(splited) < 3:
@@ -72,7 +71,12 @@ def get_label(index_data):
             label_ko_cho[i][len(ko_chset_cho)] = 1
             label_ko_jung[i][len(ko_chset_jung)] = 1
             label_ko_jong[i][len(ko_chset_jong)] = 1
+        
+        # Is English?
+        if (target in en_chset):
             label_en[i][en_chset.index(target)] = 1
+        else:
+            label_en[i][len(en_chset)] = 1
             
     # Concatenate all labels
     label = np.concatenate((label_ko_cho, label_ko_jung, label_ko_jong, label_en), axis=1)
