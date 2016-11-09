@@ -15,7 +15,7 @@ import sys
 
 import numpy
 import cv2
-from PIL import Image, ImageDraw, ExifTags
+#from PIL import Image, ImageDraw, ExifTags
 from scipy.ndimage.filters import rank_filter
 
 '''
@@ -179,7 +179,7 @@ def find_connected_components(edges):
     count = 21
     while count > 16:
         n += 1
-        expanded_image = expand_image(edges, N=3, iterations=n) * 255
+        expanded_image = expand_image(edges, N=3, iterations=n)
         _, contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         count = len(contours)
     #Image.fromarray(edges).show()
@@ -237,10 +237,11 @@ def find_optimal_bounding_boxes(contours, edges):
 ' output: opened image
 '''
 def open_image(path):
-    image = Image.open(path)
-    #image = cv2.imread(path, 0)
+    #image = Image.open(path)
+    image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     #image = Image.fromarray(numpy.uint8(image))
     # solve auto-rotated problem after Image.open()
+    '''
     for orientation in ExifTags.TAGS.keys() : 
         if ExifTags.TAGS[orientation]=='Orientation' : break 
     if (image._getexif() == None):
@@ -253,7 +254,7 @@ def open_image(path):
         image = image.rotate(270, expand=True)
     elif exif[orientation] == 8 : 
         image = image.rotate(90, expand=True)
-
+    '''
     return image
 
 '''
@@ -264,12 +265,12 @@ def open_image(path):
 '''
 def shrink_image(image):
     MAX_DIM = 2048
-    w, h = image.size
-    if max(w, h) <= MAX_DIM:
+    if max(image.shape[0], image.shape[1]) <= MAX_DIM:
         return 1.0, image
-
-    scale = 1.0 * MAX_DIM / max(w, h)
-    new_image = image.resize((int(w * scale), int(h * scale)), Image.ANTIALIAS)
+    
+    scale = 1.0 * MAX_DIM / max(image.shape[0], image.shape[1])
+    new_image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    # new_image = image.resize((int(w * scale), int(h * scale)), Image.ANTIALIAS)
     return scale, new_image
 
 '''
@@ -282,13 +283,13 @@ def preprocess_image(path, out_path):
     #denoised_img = denoising(arr_img)
     #binary_img = thresholding(denoised_img)
     original_image = open_image(path)
-    
+
     scale, shrink_img = shrink_image(original_image)
-    shrink_arr = numpy.asarray(shrink_img)
+    #shrink_arr = numpy.asarray(shrink_img)
 
     #gray_img = cv2.cvtColor(arr_img ,cv2.COLOR_BGR2GRAY, gray_img)
-    edges = cv2.Canny(shrink_arr, 100, 200)
-
+    edges = cv2.Canny(shrink_img, 100, 200)
+    
     _,contours,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     borders = lookup_borders(contours, edges)
     borders.sort(key=(lambda i, x1, y1, x2, y2: (x2 - x1) * (y2 - y1)))
@@ -318,18 +319,24 @@ def preprocess_image(path, out_path):
     # 2016-10-15 mjkim. handle multiple text areas
     boxes = find_optimal_bounding_boxes(contours, edges)
     for i, rect in enumerate(boxes):
-        # make cutting image from original 
+        # make cutting image from original
+        # if you want to return the image of original size, use below codes
         rect = [int(x / scale) for x in rect]
-        text_img = original_image.crop(rect)
+        text_img = original_image[rect[1]:rect[3], rect[0]:rect[2]]
+        # text_img = shrink_img[rect[1]:rect[3], rect[0]:rect[2]]
+        #text_img = original_image.crop(rect)
         # if you want to make cutting image from downscaled gray_image, use these codes
         # text_image = gray_image.crop(rect)
-        text_img = text_img.convert('L')
-        text_arr = numpy.asarray(text_img)
-        #(width, height) = text_img.size
+        
+        #text_img = text_img.convert('L')
+        #text_arr = numpy.asarray(text_img)
+        #(width, height) = text_img
+        
+        
         #text_arr = list(text_img.getdata())
         #text_arr = numpy.array(text_arr, dtype=numpy.uint8)
         #text_arr = text_arr.reshape((height, width, 3))
-        denoised_img = denoising(text_arr)
+        denoised_img = denoising(text_img)
         binary_img = thresholding(denoised_img)
         outfname = '{}_{}.png'.format(out_path, i)
         cv2.imwrite(outfname, binary_img)
