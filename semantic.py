@@ -1,5 +1,5 @@
-import matplotlib.pyplot as plt
-plt.rcParams['image.cmap'] = 'Greys'
+#import matplotlib.pyplot as plt
+#plt.rcParams['image.cmap'] = 'Greys'
 from detection.util import CHARTYPE
 import numpy as np
 
@@ -49,6 +49,8 @@ def kill_bad_parent(clist):
     for c in clist:
         # Has no children, nothing to do
         if len(c.children) == 0:
+            if c.value == '':
+                c.value = '?'
             continue
         kill_bad_parent(c.children)
         if c.value == '' or (c.prob < min([child.prob for child in c.children]) - 0.1):
@@ -93,9 +95,9 @@ def analyze(graphs):
             #plt.subplot(len_l,1, i_l+1)
             #plt.imshow(l.img)
             analyze_recur(l.chars)
+            print_recur(i_l, 0, l.chars, False)
             analyze_pedigree(l.chars)
             analyze_linear(l.chars)
-            print_recur(i_l, 0, l.chars, True)
             i_l+=1
     #plt.show()
     return graphs
