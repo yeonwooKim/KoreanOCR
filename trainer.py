@@ -51,7 +51,7 @@ def main(argv):
         elif opt in ("-b", "--batch"):
             batchsize = int(arg)
         elif opt in ("-l"):
-            lr_init = int(arg)
+            lr_init = float(arg)
     
     if len(args) != 1:
         print(msg_help)

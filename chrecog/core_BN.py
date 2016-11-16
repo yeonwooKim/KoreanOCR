@@ -106,10 +106,9 @@ cnn_1_pool = max2d_pool(cnn_1_concat) # 16 * 16 * 48
 cnn_2_5 = build_cnn_bn_relu(18, [5,5], cnn_1_pool, is_training, "cnn_2_5")
 cnn_2_3 = build_cnn_bn_relu(48, [3,3], cnn_1_pool, is_training, "cnn_2_3")
 cnn_2_1 = build_cnn_bn_relu(30, [1,1], cnn_1_pool, is_training, "cnn_2_1")
-cnn_2_concat = tf.concat(3, [cnn_2_5, cnn_2_3, cnn_2_1])
-cnn_2_pool = max2d_pool(cnn_2_concat) # 8 * 8 * 96
+cnn_2_concat = tf.concat(3, [cnn_2_5, cnn_2_3, cnn_2_1]) # 16 * 16 * 96
 
-cnn_2_reduce = build_cnn_bn_relu(16, [1,1], cnn_2_pool, is_training, "cnn_2_reduce")
+cnn_2_reduce = build_cnn_bn_relu(16, [1,1], cnn_2_concat, is_training, "cnn_2_reduce")
 
 dense_1 = tf.nn.relu(build_nn(1024, flatten_cnn(cnn_2_reduce), "dense_1"))
 
