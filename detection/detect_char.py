@@ -103,9 +103,9 @@ def find_split_pts(index, num_letter, size, img):
 	(_, w) = img.shape
 	i = 0
 	pts = []
-	while num_letter != 0:
+	while num_letter != 1:
 		pt, m = -1, math.inf
-		for j in range (i, w):
+		for j in range (i + round(size) + 3, min(w, i + round(size) + 7)):
 			s = sumup_col(img, j)
 			if (s <= m):
 				pt = j
@@ -134,11 +134,37 @@ def snd_pass(line, size, candidate, merge_thdl, merge_thdh):
 			if size * merge_thdl <= word[i + 1][1] - word[i][0] <= height * merge_thdh and width[i] >= width[i + 1]:
 				word[i + 1] = (word[i][0], word[i + 1][1])
 				width[i + 1] = word[i + 1][1] - word[i][0]
+			elif width[i] >= height and width[i + 1] < size / 2:
+				word[i + 1] = (word[i][0], word[i + 1][1])
+				width[i + 1] = word[i + 1][1] - word[i][0]
 			else:
 				snd_word.append(word[i])
 		snd_word.append(word[length - 1])
 		snd_candidate.append(snd_word)
 	return snd_candidate
+
+def thd_pass(line, size, candidate):
+	thd_candidate = []
+	(height, _) = line.shape
+	for word in candidate:
+		thd_word = []
+		width = calc_width(word)
+		length = len(width)
+		for i in range (0, length):
+			if width[i] > height:
+				num_letter = round(width[i] / size)
+				pts = find_split_pts(word[i][0], num_letter, size, line[0:,word[i][0]:word[i][1]])
+				l = len(pts)
+				for j in range (0, l):
+					thd_word.append(pts[j])
+				if l != 0:
+					thd_word.append((pts[l - 1][1], word[i][1]))
+				else:
+					thd_word.append(word[i])
+			else:
+				thd_word.append(word[i])
+		thd_candidate.append(thd_word)
+	return thd_candidate
 
 # Reshape narrow letters to 32 X 32
 # without modifying ratio
@@ -174,13 +200,17 @@ def proc_paragraph(para):
 	letter_size = statistics.median(wlist)
 	for i in range (0, l):
 		c1 = snd_pass(para[i], letter_size, fst_candidate[i], 0.6, 1.3)
+		c1 = thd_pass(para[i], letter_size, c1)
 		snd_candidate1.append(c1)
 		c2 = snd_pass(para[i], letter_size, fst_candidate[i], 0.8, 1.1)
+		c2 = thd_pass(para[i], letter_size, c2)
 		snd_candidate2.append(c2)
 		c3 = snd_pass(para[i], letter_size, fst_candidate[i], 0.9, 0.9)
+		c3 = thd_pass(para[i], letter_size, c3)
 		snd_candidate3.append(c3)
 		# Generous merge threshold
 		c4 = snd_pass(para[i], letter_size, fst_candidate[i], 0.7, 0.9)
+		c4 = thd_pass(para[i], letter_size, c4)
 		snd_candidate4.append(c4)
 	return (snd_candidate1, snd_candidate2, snd_candidate3, snd_candidate4)
 
