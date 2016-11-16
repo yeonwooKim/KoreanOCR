@@ -62,11 +62,15 @@ def batch_norm(layer, is_training, name, decay = 0.999, does_scale=True):
     
     return tf.cond(is_training, use_batch_with_update_mov, use_mov)
     
-def build_nn_bn(shape, X, name, is_training, decay = 0.999, does_scale=True):
+def build_nn_bn(shape, X, is_training, name, decay = 0.999, does_scale=True):
     n_before = int(X.get_shape()[1])
     W = tf.Variable(tf.truncated_normal([n_before, shape], stddev=0.1), name=name+"_W")
     layer = tf.matmul(X, W)
     return batch_norm(layer, is_training, name, decay, does_scale)
+
+def build_nn_bn_relu(shape, X, is_training, name, decay = 0.999):
+    layer = tf.nn.relu(build_nn_bn(shape, X, is_training, name, decay, False))
+    return layer
     
 def build_cnn_bn(cnn_shape, patch_shape, X, is_training, name, stride=1, decay=0.999, does_scale=True):
     n_before = int(X.get_shape()[3])
@@ -110,7 +114,7 @@ cnn_2_concat = tf.concat(3, [cnn_2_5, cnn_2_3, cnn_2_1]) # 16 * 16 * 96
 
 cnn_2_reduce = build_cnn_bn_relu(16, [1,1], cnn_2_concat, is_training, "cnn_2_reduce")
 
-dense_1 = tf.nn.relu(build_nn(1024, flatten_cnn(cnn_2_reduce), "dense_1"))
+dense_1 = build_nn_bn_relu(1024, flatten_cnn(cnn_2_reduce), is_training, "dense_1")
 
 logit = build_nn(Y_size, dense_1, "logit")
 logit_cho, logit_jung, logit_jong, logit_en = slice_label(logit,
