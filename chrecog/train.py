@@ -219,9 +219,9 @@ class Trainer:
                         print("                                        \r", end="")
                     if stat == True :
                         cv_cost, cv_acc = get_mean_in_batch(sess, (cost_mean, accuracy), cvimg, cvlabel, executor)
-                        cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, is_training: False})
+                        cur_cost_test, cur_acc = sess.run((cost_mean, accuracy), feed_dict={X:batch_x, Y:batch_y, is_training: False})
                         print ("[%s] %4.2f %4.2e %4.3f %4.2e %4.3f %3.2e" %
-                            (get_now_str(), num_trained/trainsize, cur_cost, cur_acc, cv_cost, cv_acc, lr))
+                            (get_now_str(), num_trained/trainsize, cur_cost_test, cur_acc, cv_cost, cv_acc, lr))
                     else :
                         print ("[%s] %4.2f %4.2e" % (get_now_str(), num_trained/trainsize, cur_cost))
                 if prog == True:
