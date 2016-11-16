@@ -64,13 +64,13 @@ def get_candidate(pred):
 def get_pred_one(input_mat):
     pred_cho, pred_jung, pred_jong, pred_en = sess.run(
         (h_cho, h_jung, h_jong, h_en),
-        feed_dict={X: [input_mat], keep_prob: 1})
+        feed_dict={X: [input_mat], is_training: False})
     return Prediction(pred_cho[0], pred_jung[0], pred_jong[0], pred_en[0])
 
 def get_pred_batch(input_mats):
     pred_cho, pred_jung, pred_jong, pred_en = sess.run(
         (h_cho, h_jung, h_jong, h_en),
-        feed_dict={X: input_mats, keep_prob: 1})
+        feed_dict={X: input_mats, is_training: False})
     return [Prediction(pred_cho[i], pred_jung[i], pred_jong[i], pred_en[i]) for i in range(pred_cho.shape[0])]
 
 # Reshape narrow letters to 32 X 32
