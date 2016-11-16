@@ -56,7 +56,6 @@ cnn_2_5 = build_cnn(18, [5,5], cnn_1_pool, "cnn_2_5")
 cnn_2_3 = build_cnn(48, [3,3], cnn_1_pool, "cnn_2_3")
 cnn_2_1 = build_cnn(30, [1,1], cnn_1_pool, "cnn_2_1")
 cnn_2_concat = tf.concat(3, [cnn_2_5, cnn_2_3, cnn_2_1])
-cnn_2_pool = max2d_pool(cnn_2_concat) # 8 * 8 * 96
 
 cnn_2_reduce = build_cnn(16, [1,1], cnn_2_concat, "cnn_2_pool")
 
