@@ -88,7 +88,7 @@ def get_mean_in_batch(sess, target, imgbuf, labelbuf, executor):
             break
         temp_tuple = tuple([item1 + item2 * batch_x.shape[0] for item1, item2 in
                             zip(temp_tuple,
-                                sess.run(target, feed_dict={X:batch_x, Y:batch_y, keep_prob:1}))])
+                                sess.run(target, feed_dict={X:batch_x, Y:batch_y, is_training: False}))])
         i += batch_x.shape[0]
     return tuple([item / i for item in temp_tuple])
 
@@ -133,7 +133,7 @@ def error_check(sess, chset, pred_tf, label_tf, imgbuf, labelbuf):
             batch_f = load_batch(executor, imgbuf, labelbuf, batchsize)
             if batch_x is None:
                 break
-            h, y = sess.run((pred_tf, label_tf), feed_dict={X:batch_x, Y:batch_y, keep_prob:1})
+            h, y = sess.run((pred_tf, label_tf), feed_dict={X:batch_x, Y:batch_y, is_training: False})
             for j in range(batch_x.shape[0]):
                 n_all[np.argmax(y[j])] += 1
                 if (np.argmax(h[j]) != np.argmax(y[j])):
@@ -212,14 +212,14 @@ class Trainer:
                 num_trained += batch_x.shape[0]
 
                 cur_cost = sess.run((train, cost_mean),
-                                    feed_dict={X:batch_x, Y:batch_y, keep_prob:0.5, learning_rate:lr})[1]
+                                    feed_dict={X:batch_x, Y:batch_y, is_training: True, learning_rate:lr})[1]
                 
                 if i % 200 == 0 :
                     if prog == True:
                         print("                                        \r", end="")
                     if stat == True :
                         cv_cost, cv_acc = get_mean_in_batch(sess, (cost_mean, accuracy), cvimg, cvlabel, executor)
-                        cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, keep_prob:1})
+                        cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, is_training: False})
                         print ("[%s] %4.2f %4.2e %4.3f %4.2e %4.3f %3.2e" %
                             (get_now_str(), num_trained/trainsize, cur_cost, cur_acc, cv_cost, cv_acc, lr))
                     else :
