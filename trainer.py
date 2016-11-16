@@ -7,7 +7,7 @@ msg_help = """python trainer.py <tar data>
 -v (verbose output)
 -p (show progress using carriage return)"""
 
-def train(data_path, save_path, max_epoch=4, batchsize=100, prog=False, stat=False):
+def train(data_path, save_path, max_epoch=4, batchsize=100, lr_init=0.003, prog=False, stat=False):
     import data
     from chrecog.train import Trainer
     
@@ -18,7 +18,7 @@ def train(data_path, save_path, max_epoch=4, batchsize=100, prog=False, stat=Fal
     
     trainer = Trainer(tar, label)
     trainer.init_session()
-    trainer.train(max_epoch=max_epoch, batchsize=batchsize, prog=prog, stat=stat)
+    trainer.train(max_epoch=max_epoch, batchsize=batchsize, lr_init=lr_init, prog=prog, stat=stat)
     trainer.save(save_path)
 
 def main(argv):
@@ -26,10 +26,11 @@ def main(argv):
     save_path = None
     max_epoch = 4
     batchsize = 200
+    lr_init = 0.003
     prog = False
     stat = False
     try:
-        opts, args = getopt.gnu_getopt(argv,"hpvi:o:e:b:",["progress","verbose","input=","output=","epoch=","batch="])
+        opts, args = getopt.gnu_getopt(argv,"hpvi:o:e:b:l:",["progress","verbose","input=","output=","epoch=","batch="])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
@@ -49,6 +50,8 @@ def main(argv):
             max_epoch = int(arg)
         elif opt in ("-b", "--batch"):
             batchsize = int(arg)
+        elif opt in ("-l"):
+            lr_init = int(arg)
     
     if len(args) != 1:
         print(msg_help)
@@ -60,7 +63,7 @@ def main(argv):
         print(msg_help)
         sys.exit(2)
     
-    train(data_path, save_path, max_epoch, batchsize, prog, stat)
+    train(data_path, save_path, max_epoch, batchsize, lr_init, prog, stat)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -220,8 +220,8 @@ class Trainer:
                     if stat == True :
                         cv_cost, cv_acc = get_mean_in_batch(sess, (cost_mean, accuracy), cvimg, cvlabel, executor)
                         cur_acc = sess.run(accuracy, feed_dict={X:batch_x, Y:batch_y, keep_prob:1})
-                        print ("[%s] %4.2f %4.2e %4.3f %4.2e %4.3f" %
-                            (get_now_str(), num_trained/trainsize, cur_cost, cur_acc, cv_cost, cv_acc))
+                        print ("[%s] %4.2f %4.2e %4.3f %4.2e %4.3f %3.2e" %
+                            (get_now_str(), num_trained/trainsize, cur_cost, cur_acc, cv_cost, cv_acc, lr))
                     else :
                         print ("[%s] %4.2f %4.2e" % (get_now_str(), num_trained/trainsize, cur_cost))
                 if prog == True:
