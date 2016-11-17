@@ -28,7 +28,7 @@ def get_txt(img):
 
     print_msg("recognizing..");
     sess = get_session()
-    load_ckpt(sess, "data/ckpt/161109_2ID.ckpt")
+    load_ckpt(sess, "data/ckpt/161116_BN.ckpt")
     graphs = get_pred(graphs)
 
     print_msg("semantic..");
