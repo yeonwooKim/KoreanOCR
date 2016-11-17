@@ -8,13 +8,46 @@ from util import *
 
 # If executed directly
 def run_direct():
-	original_img = cv2.imread('test/line_testing/test2.png')
+	original_img = cv2.imread('test/line_testing/test_book.png')
 	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 	(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 	(x, y) = im_bw.shape
 
 	essay = dl.output_line_imgs(im_bw)
 	save_essay(essay)
+	get_graphs(im_bw)
+
+# Guesses one letter size
+def guess_letter_size(wlist, height):
+	wlist.sort()
+	l = int(height * 0.8)
+	h = int(height * 1.2)
+	bucket = [0]*(h - l)
+
+	length = len(wlist)
+	err = 2
+	j = 0
+	for i in range (l, h):
+		if (wlist[j] > i + err):
+			break
+		flag = 0
+		for k in range (j, length):
+			if wlist[k] > i - err and flag == 0:
+				j = k
+				flag = 1
+	
+			if wlist[k] >= i - err and wlist[k] <= i + err:
+				bucket[i - l] = bucket[i - l] + 1
+			elif wlist[k] < i - err:
+				continue
+			else:
+				break
+	m, index = -1, -1
+	for i in range (l, h):
+		if (m < bucket[i - l]):
+			m, index = bucket[i - l], i
+
+	return index
 
 # Returns all the candidate letter points as a list of pairs and max width of letter
 # Return value:
@@ -28,7 +61,7 @@ def fst_pass(line):
 	start_letter, end_letter = -1, -1
 	wlist = []
 	
-	blank_thd = 10
+	blank_thd = 5 # Fix this to adjust blank column threshold
 
 	(height, length) = line.shape
 	for i in range (0, length):
@@ -38,7 +71,7 @@ def fst_pass(line):
 				start_letter = i
 			else:
 				start_letter = i - 1
-			if start_letter - end_letter > 0.5 * height:
+			if start_letter - end_letter > 0.2 * height: # Fix this to adjust space threshold
 				if word != []:
 					candidate.append(word)
 					word = []
@@ -47,8 +80,9 @@ def fst_pass(line):
 		elif sum <= blank_thd:
 			end_letter = i
 			width = end_letter - start_letter
-			wlist.append(width)
-			word.append((start_letter, end_letter))
+			if (width >= 3):
+				wlist.append(width)
+				word.append((start_letter, end_letter))
 			start_letter = -1
 
 	if start_letter != -1:
@@ -57,7 +91,7 @@ def fst_pass(line):
 		word.append((start_letter, length - 1))
 	if word != []:
 		candidate.append(word)
-	return (statistics.median(wlist), candidate)
+	return (guess_letter_size(wlist, height), candidate)
 
 # Calculates the difference of end and start pts of each letter, returns a list of widths
 def calc_width(word):
@@ -72,7 +106,7 @@ def find_split_pts(index, num_letter, size, img):
 	pts = []
 	while num_letter != 0:
 		pt, m = -1, float("inf")
-		for j in range (i, w):
+		for j in range (i + round(size) + 1, min(w, i + round(size) + 5)):
 			s = sumup_col(img, j)
 			if (s <= m):
 				pt = j
@@ -89,41 +123,60 @@ def find_split_pts(index, num_letter, size, img):
 #		[ word1, word2, word3, ... , wordN ]
 # wordN ::= [ letter1, letter2, ... , letterN ]
 # letterN ::= ( starting index, ending index )
-def snd_pass(line, size, candidate, merge_thdl, merge_thdh):
+def snd_pass(line, size, candidate, merge_thdl, merge_thdh, flag):
 	snd_candidate = []
 	(height, _) = line.shape
-	for word in candidate:
+	for w in candidate:
+		word = list(w)
 		snd_word = []
 		width = calc_width(word)
 		length = len(width)
-		merged = 0
 		for i in range (0, length - 1):
-			if merged == 1:
-				merged = 0
-				continue
-			if size * merge_thdl <= word[i + 1][1] - word[i][0] <= height * merge_thdh and width[i] >= width[i + 1]:
-				snd_word.append((word[i][0], word[i + 1][1]))
-				merged = 1
-			elif width[i] > height:
-				num_letter = width[i] // size
-				pts = find_split_pts(word[i][0], num_letter, size, line[0:, word[i][0]:word[i][1]])
+			if flag == 0:
+				if size * merge_thdl <= word[i + 1][1] - word[i][0] <= height * merge_thdh and width[i] >= width[i + 1]:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				elif width[i] >= height and width[i + 1] < size / 2:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				elif width[i] < size * 0.7 and width[i + 1] > height:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				elif width[i + 1] > height:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				else:
+					snd_word.append(word[i])
+			else:
+				word[i + 1] = (word[i][0], word[i + 1][1])
+				width[i + 1] = word[i + 1][1] - word[i][0]
+		snd_word.append(word[length - 1])
+		snd_candidate.append(snd_word)
+	return snd_candidate
+
+# split merged letters
+def thd_pass(line, size, candidate):
+	thd_candidate = []
+	(height, _) = line.shape
+	for word in candidate:
+		thd_word = []
+		width = calc_width(word)
+		length = len(width)
+		for i in range (0, length):
+			if width[i] > height:
+				num_letter = round(width[i] / size)
+				pts = find_split_pts(word[i][0], num_letter, size, line[0:,word[i][0]:word[i][1]])
 				l = len(pts)
 				for j in range (0, l):
-					snd_word.append(pts[j])
-					if j == l - 1:
-						w = word[i][1] - pts[j][1]
-						if (size * merge_thdl) <= word[i + 1][1] - pts[j][1] <= (height * merge_thdh) and w >= width[i + 1]:
-							snd_word.append((pts[j][1], word[i + 1][1]))	
-							merged = 1
-						else:
-							snd_word.append((pts[j][1], word[i][1]))
+					thd_word.append(pts[j])
+				if l != 0:
+					thd_word.append((pts[l - 1][1], word[i][1]))
+				else:
+					thd_word.append(word[i])
 			else:
-				snd_word.append(word[i])
-		if merged == 0:
-			snd_word.append(word[length - 1])
-		snd_candidate.append(snd_word)
-		snd_word = []
-	return snd_candidate
+				thd_word.append(word[i])
+		thd_candidate.append(thd_word)
+	return thd_candidate
 
 # Given a paragraph, processes 2 times and returns the candidate word points
 def proc_paragraph(para):
@@ -142,14 +195,19 @@ def proc_paragraph(para):
 		return []
 	letter_size = statistics.median(wlist)
 	for i in range (0, l):
-		c = snd_pass(para[i], letter_size, fst_candidate[i], 1.1, 0.9)
-		snd_candidate1.append(c)
-		c = snd_pass(para[i], letter_size, fst_candidate[i], 1.1, 1.1)
-		snd_candidate2.append(c)
-		c = snd_pass(para[i], letter_size, fst_candidate[i], 0.9, 0.9)
-		snd_candidate3.append(c)
-		c = snd_pass(para[i], letter_size, fst_candidate[i], 1.1, 0.9)
-		snd_candidate4.append(c)
+		c1 = snd_pass(para[i], letter_size, fst_candidate[i], 0.6, 1.3, 0)
+		c1 = thd_pass(para[i], letter_size, c1)
+		snd_candidate1.append(c1)
+		c2 = snd_pass(para[i], letter_size, fst_candidate[i], 0.8, 1.1, 0)
+		c2 = thd_pass(para[i], letter_size, c2)
+		snd_candidate2.append(c2)
+		c3 = snd_pass(para[i], letter_size, fst_candidate[i], 0.7, 0.9, 0)
+		c3 = thd_pass(para[i], letter_size, c3)
+		snd_candidate3.append(c3)
+		# Generous merge threshold
+		c4 = snd_pass(para[i], letter_size, fst_candidate[i], None, None, 1)
+		c4 = thd_pass(para[i], letter_size, c4)
+		snd_candidate4.append(c4)
 	return (snd_candidate1, snd_candidate2, snd_candidate3, snd_candidate4)
 
 # Implemented for testing; truncates line image to letters and saves letter images
@@ -174,8 +232,8 @@ def save_essay(essay):
 		for j in range (0, l2):
 			trunc_n_save_letter(i, j, 1, essay[i][j], c1[j])
 			trunc_n_save_letter(i, j, 2, essay[i][j], c2[j])
-			trunc_n_save_letter(i, j, 3, essay[i][j], c2[j])
-			trunc_n_save_letter(i, j, 4, essay[i][j], c2[j])
+			trunc_n_save_letter(i, j, 3, essay[i][j], c3[j])
+			trunc_n_save_letter(i, j, 4, essay[i][j], c4[j])
 
 # Given four lists (candidate lists of different threshold),
 # finds the indices for each list with the same end points
