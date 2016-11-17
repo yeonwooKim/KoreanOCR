@@ -170,8 +170,8 @@ def slice_img(mat):
     return imresize(sliced, [32, 32])
 
 def add_noise(mat):
-    background = 255 * np.floor(np.clip(np.random.randn(*mat.shape) - random.random(), 0, 1))
-    salt = 255 * np.floor(np.clip(np.random.randn(*mat.shape) - random.random(), 0, 1))
+    background = 255 * np.floor(np.clip(np.random.randn(*mat.shape) - random.random() - 0.8, 0, 1))
+    salt = 255 * np.floor(np.clip(np.random.randn(*mat.shape) - random.random() + 0.2, 0, 1))
     cliped = np.clip(mat - background + salt, 0, 255)
     return cliped
 
