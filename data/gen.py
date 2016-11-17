@@ -169,10 +169,20 @@ def slice_img(mat):
     sliced = mat[y_start:y_end, x_start:x_end]
     return imresize(sliced, [32, 32])
 
-#def add_noise(mat):
-#    salted = mat - 255 * np.floor(np.clip(np.random.randn(*mat.shape) - 1, 0, 1))
-#    return salted
+def add_noise(mat):
+    background = 255 * np.floor(np.clip(np.random.randn(*mat.shape) - random.random(), 0, 1))
+    salt = 255 * np.floor(np.clip(np.random.randn(*mat.shape) - random.random(), 0, 1))
+    cliped = np.clip(mat - background + salt, 0, 255)
+    return cliped
 
+def process_mat(mat):
+    return slice_img(add_noise(mat))
+
+def get_processed(target, font=None, weight=None):
+    mat = get_mat(target, font, weight)
+    if mat is None:
+        return None
+    return process_mat(mat)
 
 def get_inval_char():
     i = random.randrange(0,5)
@@ -227,9 +237,9 @@ def save_chset_random(fonts, weights, chsets, chws, path, num):
             font = random.choice(fonts) 
             mat = get_mat(ch, font, weight)
 
-        sliced = slice_img(mat)
+        processed = process_mat(mat)
         ft = io.BytesIO()
-        Image.fromarray(sliced, mode='L').save(ft, format="PNG", optimize=True, compress_level=9)
+        Image.fromarray(processed, mode='L').save(ft, format="PNG", optimize=True, compress_level=9)
         index_data.append({'path': pathname, 'font': font, 'weight': weight, 'target': ch})
         ti = tarfile.TarInfo(pathname)
         ti.size = ft.getbuffer().nbytes

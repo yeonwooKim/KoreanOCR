@@ -79,16 +79,17 @@ def show_example_all(ch, fonts, weights):
     for font, weight in itertools.product(fonts, weights):
         mat = gen.get_mat(ch, font, weight)
         if mat is None:
+            print("Skip %s for %s %s" % (ch, font, weight))
             continue
-        sliced.append(gen.slice_img(mat))
+        sliced.append(gen.process_mat(mat))
     draw_subplot(sliced, math.ceil(len(sliced)/2), 2)
     
 def show_example(ch):
-    sliced = [gen.slice_img(gen.get_mat(ch)) for i in range(7)]
+    sliced = [gen.process_mat(gen.get_mat(ch)) for i in range(7)]
     draw_subplot(sliced, 1, 7)
     
 def show_example_random():
-    sliced = [gen.slice_img(gen.get_mat(get_random_ch())) for i in range(7)]
+    sliced = [gen.process_mat(gen.get_mat(get_random_ch())) for i in range(7)]
     draw_subplot(sliced, 1, 7)
     
 #for ch in ".", ";", "2", ")", "가", "낢", "·", "《", "》", "「", "」", "『", "』" :
@@ -113,7 +114,7 @@ def generate_fonts(save_path, datasize, plot, force=False):
     for font in fonts:
         print(font)
     if plot:
-        show_example_all("낡", fonts, weights)
+        show_example_all("A", fonts, weights)
         plt.show()
     print("================")
     if (force or input("Are you sure to proceed? (y/n)") == "y"):
