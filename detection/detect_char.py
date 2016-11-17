@@ -15,8 +15,9 @@ def run_direct():
 
 	essay = dl.output_line_imgs(im_bw)
 	save_essay(essay)
+	get_graphs(im_bw)
 
-
+# Guesses one letter size
 def guess_letter_size(wlist, height):
 	wlist.sort()
 	l = int(height * 0.8)
@@ -103,9 +104,9 @@ def find_split_pts(index, num_letter, size, img):
 	(_, w) = img.shape
 	i = 0
 	pts = []
-	while num_letter != 1:
+	while num_letter > 1:
 		pt, m = -1, math.inf
-		for j in range (i + round(size) + 3, min(w, i + round(size) + 7)):
+		for j in range (i + round(size) + 1, min(w, i + round(size) + 5)):
 			s = sumup_col(img, j)
 			if (s <= m):
 				pt = j
@@ -122,7 +123,7 @@ def find_split_pts(index, num_letter, size, img):
 #		[ word1, word2, word3, ... , wordN ]
 # wordN ::= [ letter1, letter2, ... , letterN ]
 # letterN ::= ( starting index, ending index )
-def snd_pass(line, size, candidate, merge_thdl, merge_thdh):
+def snd_pass(line, size, candidate, merge_thdl, merge_thdh, flag):
 	snd_candidate = []
 	(height, _) = line.shape
 	for w in candidate:
@@ -131,18 +132,29 @@ def snd_pass(line, size, candidate, merge_thdl, merge_thdh):
 		width = calc_width(word)
 		length = len(width)
 		for i in range (0, length - 1):
-			if size * merge_thdl <= word[i + 1][1] - word[i][0] <= height * merge_thdh and width[i] >= width[i + 1]:
-				word[i + 1] = (word[i][0], word[i + 1][1])
-				width[i + 1] = word[i + 1][1] - word[i][0]
-			elif width[i] >= height and width[i + 1] < size / 2:
-				word[i + 1] = (word[i][0], word[i + 1][1])
-				width[i + 1] = word[i + 1][1] - word[i][0]
+			if flag == 0:
+				if size * merge_thdl <= word[i + 1][1] - word[i][0] <= height * merge_thdh and width[i] >= width[i + 1]:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				elif width[i] >= height and width[i + 1] < size / 2:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				elif width[i] < size * 0.7 and width[i + 1] > height:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				elif width[i + 1] > height:
+					word[i + 1] = (word[i][0], word[i + 1][1])
+					width[i + 1] = word[i + 1][1] - word[i][0]
+				else:
+					snd_word.append(word[i])
 			else:
-				snd_word.append(word[i])
+				word[i + 1] = (word[i][0], word[i + 1][1])
+				width[i + 1] = word[i + 1][1] - word[i][0]
 		snd_word.append(word[length - 1])
 		snd_candidate.append(snd_word)
 	return snd_candidate
 
+# split merged letters
 def thd_pass(line, size, candidate):
 	thd_candidate = []
 	(height, _) = line.shape
@@ -199,17 +211,17 @@ def proc_paragraph(para):
 	l = len(para)
 	letter_size = statistics.median(wlist)
 	for i in range (0, l):
-		c1 = snd_pass(para[i], letter_size, fst_candidate[i], 0.6, 1.3)
+		c1 = snd_pass(para[i], letter_size, fst_candidate[i], 0.6, 1.3, 0)
 		c1 = thd_pass(para[i], letter_size, c1)
 		snd_candidate1.append(c1)
-		c2 = snd_pass(para[i], letter_size, fst_candidate[i], 0.8, 1.1)
+		c2 = snd_pass(para[i], letter_size, fst_candidate[i], 0.8, 1.1, 0)
 		c2 = thd_pass(para[i], letter_size, c2)
 		snd_candidate2.append(c2)
-		c3 = snd_pass(para[i], letter_size, fst_candidate[i], 0.9, 0.9)
+		c3 = snd_pass(para[i], letter_size, fst_candidate[i], 0.7, 0.9, 0)
 		c3 = thd_pass(para[i], letter_size, c3)
 		snd_candidate3.append(c3)
 		# Generous merge threshold
-		c4 = snd_pass(para[i], letter_size, fst_candidate[i], 0.7, 0.9)
+		c4 = snd_pass(para[i], letter_size, fst_candidate[i], None, None, 1)
 		c4 = thd_pass(para[i], letter_size, c4)
 		snd_candidate4.append(c4)
 	return (snd_candidate1, snd_candidate2, snd_candidate3, snd_candidate4)
