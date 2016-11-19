@@ -5,82 +5,63 @@ import numpy as np
 
 def print_recur(i_l, indent, clist, force_print=False):
     for c in clist:
-        if c.type != CHARTYPE.BLANK:
-            if force_print or indent > 0 or len(c.children) > 0:
-                print("%s (%2d, %4d, %4d)" % (' ' * indent, i_l, c.pt[0], c.pt[1]), end=" ")
+        print("%s (%2d, %4d, %4d)" % (' ' * indent, i_l, c.pt[0], c.pt[1]), end=" ")
+        if hasattr(c, "prob"):
+            if c.value is None:
+                print("%.3f %s" % (c.prob, "invalid"))
+            else:
                 print("%.3f %s" % (c.prob, c.value))
         else:
-            if force_print or indent > 0 or len(c.children) > 0:
-                print("%s (%2d, %4d, %4d)" % (' ' * indent, i_l, -1, -1), end=" ")
-                print("%.3f %s" % (c.prob, c.value))
+            print("")
         if len(c.children) > 0:
             print_recur(i_l, indent + 4, c.children, True)
 
 def analyze_recur(clist):
-    prev = None
     for c in clist:
-        if c.type != CHARTYPE.BLANK:
-            c.prob, c.value = c.pred.sure, c.pred.candidate
-        else:
+        if c.type == CHARTYPE.BLANK:
+            c.pt = [-1, -1]
             c.prob, c.value = 1, " "
+        elif hasattr(c, "pred"):
+            c.prob, c.value = c.pred.sure, c.pred.candidate
+                
         if len(c.children) > 0:
             analyze_recur(c.children)
-        prev = c
         
-def kill_bad_children(clist):
-    if len(clist) == 0:
-        return
+# Take candidate with lowest 'rotten point'
+# rotten: number of invalid symbols
+# tail: length of symbols - 1
+# prob: lowest probability of symbols
+def merge_children(clist):
     for c in clist:
-        kill_bad_children(c.children)
-        # If one of them is bad, abandon all
-        for child in c.children:
-            if child.value == "" and len(child.children) == 0 :
-                c.children = []
-                break;
-
-def consume_children(c):
-    c.prob = min([child.prob for child in c.children])
-    c.value = ''.join([child.value for child in c.children])
-    c.children = []
-
-def kill_bad_parent(clist):
-    if len(clist) == 0:
-        return
-    for c in clist:
-        # Has no children, nothing to do
-        if len(c.children) == 0:
-            if c.value == '':
-                c.value = '?'
-            continue
-        kill_bad_parent(c.children)
-        if c.value == '' or (c.prob < min([child.prob for child in c.children]) - 0.1):
-            consume_children(c)
-
-# 마침표나 쉽표로 나눌 만한 건 나누자
-def split_periods(clist):
-    for c in clist:
-        if len(c.children) == 2:
-            if c.children[1].value == '.' or c.children[1].value == ',':
-                 consume_children(c)
-
-def merge_with_sibiling(clist):
-    prev = None
-    for c in clist:
-        if prev is None:
-            prev = c
-            continue
-        if prev.value == '\'' and c.value == '\'':
-            prev.value = ''
-            c.value = '"'
-        prev = c
-
-def analyze_pedigree(clist):
-    kill_bad_children(clist)
-    kill_bad_parent(clist)
-
-def analyze_linear(clist):
-    merge_with_sibiling(clist)
-    split_periods(clist)
+        cand = None
+        merge_children(c.children)
+        for i, child in enumerate(c.children):
+            if cand is None:
+                cand = child
+            elif child.rotten_point < cand.rotten_point:
+                cand = child
+        if cand is None:
+            c.tail = 0
+            if c.value is None:
+                c.value = "?"
+                c.rotten = 1
+            else:
+                c.rotten = 0
+        else:
+            c.tail = cand.tail + 1
+            if hasattr(c, "prob"):
+                c.prob = min(c.prob, cand.prob)
+                if c.value is None:
+                    c.value = "?" + cand.value
+                    c.rotten = cand.rotten + 1
+                else:
+                    c.value += cand.value
+                    c.rotten = cand.rotten
+            else:
+                c.prob = cand.prob
+                c.value = cand.value
+                c.rotten = cand.rotten
+        c.rotten_point = c.rotten * 50 + (1-c.prob) * 100 + c.tail
 
 def analyze(graphs):
     len_l = 0
@@ -95,9 +76,12 @@ def analyze(graphs):
             #plt.subplot(len_l,1, i_l+1)
             #plt.imshow(l.img)
             analyze_recur(l.chars)
-            print_recur(i_l, 0, l.chars, False)
-            analyze_pedigree(l.chars)
-            analyze_linear(l.chars)
+            print_recur(i_l, 0, l.chars, True)
+            merge_children(l.chars)
+            #for c in l.chars:
+            #    print("(%2d, %4d, %4d, %4d) %s" % (i_l, c.pt[0], c.pt[1], c.rotten_point, c.value))
+            #analyze_pedigree(l.chars)
+            #analyze_linear(l.chars)
             i_l+=1
     #plt.show()
     return graphs

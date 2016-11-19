@@ -41,7 +41,7 @@ class Prediction:
     
 def get_candidate(pred):
     if pred.invalid_en and pred.invalid_ko:
-        return min(pred.max_en_prob, pred.maxmin_ko_prob), ""
+        return min(pred.max_en_prob, pred.maxmin_ko_prob), None
     if pred.invalid_ko:
         return pred.max_en_prob, en_chset[pred.max_en]
     ## 한글 취급
@@ -91,13 +91,20 @@ def reshape_with_margin(img, size=32, pad=4):
 	padded[pad:-pad, pad:-pad] = reshaped
 	return padded
 
+def set_img(l, allc, allimg, c):
+    if c.type == CHARTYPE.BLANK:
+        return
+    if c.pt[1] - c.pt[0] < 3:
+        c.value = ""
+        c.prob = 1.0
+        return
+    c.img = reshape_with_margin(l.img[:, c.pt[0]:c.pt[1]]) / 255
+    allc.append(c)
+    allimg.append(c.img)
+
 def set_img_recur(l, allc, allimg, clist):
     for c in clist:
-        if c.type != CHARTYPE.BLANK:
-            assert c.type == CHARTYPE.CHAR
-            c.img = reshape_with_margin(l.img[:, c.pt[0]:c.pt[1]]) / 255
-            allc.append(c)
-            allimg.append(c.img)
+        set_img(l, allc, allimg, c)
         if len(c.children) > 0:
             set_img_recur(l, allc, allimg, c.children)
 
@@ -107,7 +114,11 @@ def get_pred(graphs):
     all_pred = []
     for p in graphs:
         for l in p.lines:
-            set_img_recur(l, all_chars, all_imgs, l.chars)
+            for c in l.chars:
+                if len(c.children) > 0:
+                    set_img_recur(l, all_chars, all_imgs, c.children)
+                else:
+                    set_img(l, all_chars, all_imgs, c)
     
     print("predicting %d cases..." % len(all_chars))
     all_imgs = np.asarray(all_imgs)
