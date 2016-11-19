@@ -4,6 +4,7 @@ import cv2
 
 import preproc
 import detection
+from detection.util import Paragraph, Line, Char, CHARTYPE
 from chrecog.predict import get_session, load_ckpt, get_pred
 import reconst
 import semantic
@@ -39,17 +40,47 @@ def get_txt(img):
 
 msg_help = """python examine.py <image_path>"""
 
-def main(argv):
-    if (len(argv) != 1) :
-        print(msg_help)
-        exit(1)
+def get_char(img):
+    processed = preproc.process(img)
+    chars = [Char([0, processed.shape[1]], CHARTYPE.CHAR)]
+    lines = [Line(processed, chars)]
+    graphs = [Paragraph(lines)]
 
-    img = cv2.imread(argv[0])
+    sess = get_session()
+    load_ckpt(sess, "data/ckpt/161117_BN2.ckpt")
+    graphs = get_pred(graphs)
+
+    graphs = semantic.analyze(graphs)
+    return reconst.build_graphs(graphs)
+
+
+def main(argv):
+    letter=False
+    try:
+        opts, args = getopt.gnu_getopt(argv,"hl",["help", "letter"])
+    except getopt.GetoptError:
+        print(msg_help)
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print(msg_help)
+            sys.exit()
+        elif opt in ("-l", "--letter"):
+            letter=True
+    
+    if len(args) != 1:
+        print(msg_help)
+        sys.exit(2)
+
+    img = cv2.imread(args[0])
     if (img is None) :
         print("Invalid image file")
         exit(1)
 
-    print(get_txt(img))
+    if not letter:
+        print(get_txt(img))
+    else:
+        print(get_char(img))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

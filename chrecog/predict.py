@@ -86,7 +86,7 @@ def reshape_with_margin(img, size=32, pad=4):
 		margin = (dim - img.shape[0])//2
 		margin_img = np.zeros([margin, dim])
 		reshaped = np.r_[margin_img, img, margin_img]
-	reshaped = cv2.resize(reshaped, (size-pad*2, size-pad*2))
+	reshaped = cv2.resize(reshaped, (size-pad*2, size-pad*2), interpolation = cv2.INTER_AREA)
 	padded = np.zeros([size, size])
 	padded[pad:-pad, pad:-pad] = reshaped
 	return padded

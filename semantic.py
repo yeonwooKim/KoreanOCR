@@ -26,10 +26,19 @@ def analyze_recur(clist):
                 
         if len(c.children) > 0:
             analyze_recur(c.children)
+
+# Analyze tail point which is the measure of too many splits.
+# Normally length - 1
+def eval_tail(cand):
+    point = 0
+    # Please please split the . and , symbols...!!
+    if cand.value == '.' or cand.value == ',':
+        point += 30
+    return cand.tail + 1 - point
         
 # Take candidate with lowest 'rotten point'
 # rotten: number of invalid symbols
-# tail: length of symbols - 1
+# tail: refer to eval_tail
 # prob: lowest probability of symbols
 def merge_children(clist):
     for c in clist:
@@ -48,7 +57,7 @@ def merge_children(clist):
             else:
                 c.rotten = 0
         else:
-            c.tail = cand.tail + 1
+            c.tail = eval_tail(cand)
             if hasattr(c, "prob"):
                 c.prob = min(c.prob, cand.prob)
                 if c.value is None:
@@ -76,12 +85,10 @@ def analyze(graphs):
             #plt.subplot(len_l,1, i_l+1)
             #plt.imshow(l.img)
             analyze_recur(l.chars)
-            print_recur(i_l, 0, l.chars, True)
+            #print_recur(i_l, 0, l.chars, True)
             merge_children(l.chars)
-            #for c in l.chars:
-            #    print("(%2d, %4d, %4d, %4d) %s" % (i_l, c.pt[0], c.pt[1], c.rotten_point, c.value))
-            #analyze_pedigree(l.chars)
-            #analyze_linear(l.chars)
+            for c in l.chars:
+                print("(%2d, %4d, %4d, %4d) %s" % (i_l, c.pt[0], c.pt[1], c.rotten_point, c.value))
             i_l+=1
     #plt.show()
     return graphs
