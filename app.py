@@ -5,7 +5,7 @@
 from flask import Flask, render_template, request
 import cv2
 import numpy as np
-from examine import get_txt
+import examine
 
 app = Flask(__name__)
 
