@@ -1,6 +1,7 @@
 #import matplotlib.pyplot as plt
 #plt.rcParams['image.cmap'] = 'Greys'
 from detection.util import CHARTYPE
+from chrecog.predict import get_pred_one, reshape_with_margin
 import numpy as np
 
 def print_recur(i_l, indent, clist, force_print=False):
@@ -36,6 +37,18 @@ def eval_tail(cand):
         point += 30
     return cand.tail + 1 - point
         
+
+def try_split_rotten(char):
+    lpred = get_pred_one(reshape_with_margin(char.img[:, :16]))
+    rpred = get_pred_one(reshape_with_margin(char.img[:, 16:]))
+    if lpred.candidate is None or rpred.candidate is None:
+        return False
+    if lpred.sure < 0.9 or rpred.sure < 0.9:
+        return False
+    char.prob = min((lpred.sure, rpred.sure))
+    char.value = lpred.candidate + rpred.candidate
+    return True
+
 # Take candidate with lowest 'rotten point'
 # rotten: number of invalid symbols
 # tail: refer to eval_tail
@@ -51,7 +64,7 @@ def merge_children(clist):
                 cand = child
         if cand is None:
             c.tail = 0
-            if c.value is None:
+            if c.value is None and not try_split_rotten(c):
                 c.value = "?"
                 c.rotten = 1
             else:
@@ -60,7 +73,7 @@ def merge_children(clist):
             c.tail = eval_tail(cand)
             if hasattr(c, "prob"):
                 c.prob = min(c.prob, cand.prob)
-                if c.value is None:
+                if c.value is None and not try_split_rotten(c):
                     c.value = "?" + cand.value
                     c.rotten = cand.rotten + 1
                 else:
@@ -71,6 +84,22 @@ def merge_children(clist):
                 c.value = cand.value
                 c.rotten = cand.rotten
         c.rotten_point = c.rotten * 50 + (1-c.prob) * 100 + c.tail
+
+def analyze_sibiling(clist):
+    prev = None
+    for child in clist:
+        if child.value is None:
+            prev = None
+            continue
+        cl = list(child.value)
+        for i, c in enumerate(cl):
+            if prev is None:
+                prev = c
+                continue
+            if prev == '다' and c == '·':
+                cl[i] = '.'
+            prev = c
+        child.value = "".join(cl)
 
 def analyze(graphs):
     len_l = 0
@@ -87,8 +116,9 @@ def analyze(graphs):
             analyze_recur(l.chars)
             #print_recur(i_l, 0, l.chars, True)
             merge_children(l.chars)
-            for c in l.chars:
-                print("(%2d, %4d, %4d, %4d) %s" % (i_l, c.pt[0], c.pt[1], c.rotten_point, c.value))
+            analyze_sibiling(l.chars)
+            #for c in l.chars:
+            #    print("(%2d, %4d, %4d, %4d) %s" % (i_l, c.pt[0], c.pt[1], c.rotten_point, c.value))
             i_l+=1
     #plt.show()
     return graphs
