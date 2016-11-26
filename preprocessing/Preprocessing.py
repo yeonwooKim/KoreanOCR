@@ -19,6 +19,40 @@ import cv2
 from scipy.ndimage.filters import rank_filter
 
 '''
+' name: 
+' function: 
+' method: 
+'''
+class Table(object):
+    def __init__(self, info, img):
+        """set the table info in a multi-dimensional list
+        set the image list of each cell."""
+        self.info = info
+        self.image = img
+
+    def getInfo(self):
+        """Return the table info of this class"""
+        return self.info
+    
+    def getImage(self):
+        """Return the image list of this class table"""
+        return self.image
+
+'''
+' name: 
+' function: 
+' method:
+'''
+class Paragraph(object):
+    def __init__(self, img):
+        """set the paragraph image of this class table"""
+        self.image = img
+    
+    def getImage(self):
+        """Return the image of this class table"""
+        return self.image
+
+'''
 name: denoising
 function: denoise the given image
 input: rawimg(image array)
@@ -26,10 +60,15 @@ output: normal_img(denoised image)
 '''
 def denoising(rawimg):
     # normalize the image
-    dst = numpy.zeros(rawimg.shape)
-    normal_img = cv2.normalize(rawimg, dst, alpha=20, beta=255, norm_type=cv2.NORM_MINMAX)
-    #cv2.imwrite('contrast_sample_0.png', normal_img)
-
+    grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
+    mask = numpy.zeros((grayimg.shape),numpy.uint8)
+    kernel1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(11,11))
+    close = cv2.morphologyEx(grayimg,cv2.MORPH_CLOSE,kernel1)
+    div = numpy.float32(grayimg)/(close)
+    normal_img = numpy.uint8(cv2.normalize(div,div,20,255,cv2.NORM_MINMAX))
+    resultimg = cv2.cvtColor(normal_img,cv2.COLOR_GRAY2BGR)
+    #cv2.imwrite('morphology_0.png', normal_img)
+    
     # denoise image: mean_bilateral'
     #bilat_img = cv2.bilateralFilter(normal_img, 3, 20, s0=10, s1=10)
     #cv2.imwrite('bilateral_sample_0.png', bilat_img)    
@@ -37,17 +76,8 @@ def denoising(rawimg):
     # algorithm below is too slow
     #denoiseimg = cv2.fastNlMeansDenoising(contrastimg,None,10,7,21)
     
-    return normal_img
-    """
-    hsv_img = cv2.cvtColor(normal_img, cv2.COLOR_BGR2HSV)
-    lower_bound = np.array([0,0,100])
-    upper_bound = np.array([255,255,200])
-    mask = cv2.inRange(hsv_img, lower_bound, upper_bound)
-    denoised = cv2.bitwise_and(hsv_img, hsv_img, mask=mask)
-    cv2.imwrite('denoised_sample_10.png', denoised)
-
-    return denoised
-    """
+    return resultimg
+    
 '''
 ' name: union_rectangles
 ' function: union two bounding rectangles
@@ -84,21 +114,24 @@ input: rawimg(image array - np.uint8)
 output: binary image
 '''
 def thresholding(rawimg):
-    binary_img = cv2.adaptiveThreshold(rawimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+    grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
+    binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
                           cv2.THRESH_BINARY_INV, 11, 2)
-    return binary_img
+    resultimg = cv2.cvtColor(binary_img,cv2.COLOR_GRAY2BGR)
+    return resultimg
 
 '''
 ' name: find_boundingrect
-' function: calculate bounding rectangles from given contours &
-			calculate the number of pixels in eact contour
-' input: contours(list of contours in the image),
-		 edges(edge-detected image)
+' function: calculate bounding rectangles from given contours & calculate the number of pixels in eact contour
+' input: contours(list of contours in the image), edges(edge-detected image)
 ' output: list of bounding rectangle information(x1,y1,x2,y2,pixel-num)
 ''' 
 def find_boundingrect(contours, edges):
     boxes = []
     for c in contours:
+        #rect = cv2.minAreaRect(c)
+        #box = cv2.boxPoints(rect)
+        #box = numpy.int0(box)
         x,y,w,h = cv2.boundingRect(c)
         image = numpy.zeros(edges.shape)
         cv2.drawContours(image, [c], 0, 255, -1)
@@ -116,8 +149,7 @@ def find_boundingrect(contours, edges):
 '''
 ' name: lookup_borders
 ' function: find borders(big bounding rectangle) from the image
-' input: contours(list of contours in the image),
-		 edges(edge-detected image)
+' input: contours(list of contours in the image), edges(edge-detected image)
 ' output: list of borders
 ''' 
 def lookup_borders(contours, edges):
@@ -126,14 +158,14 @@ def lookup_borders(contours, edges):
     for i, c in enumerate(contours):
         x,y,w,h = cv2.boundingRect(c)
         if w * h > 0.5 * area:
+            print(i, x, y, x+w-1, y+h-1)
             borders.append((i, x, y, x + w - 1, y + h - 1))
     return borders
 
 '''
 ' name: remove_border
 ' function: remove border from the image
-' input: contours(list of contours in the image),
-		 edges(edge-detected image) 
+' input: contours(list of contours in the image), edges(edge-detected image) 
 ' output: border-removed image
 ''' 
 def remove_border(contour, edges):
@@ -144,7 +176,7 @@ def remove_border(contour, edges):
     r = cv2.minAreaRect(contour)
     degs = r[2]
     if min(degs % 90, 90 - (degs % 90)) <= 10.0:    # angle from right
-        box = cv2.cv.BoxPoints(r)
+        box = cv2.boxPoints(r)
         box = numpy.int0(box)
         cv2.drawContours(image, [box], 0, 255, -1)
         cv2.drawContours(image, [box], 0, 0, 4)
@@ -189,10 +221,8 @@ def find_connected_components(edges):
 #Find rects of text areas and Returns a list of (x1, y1, x2, y2) tuples.
 '''
 ' name: find_optimal_bounding_boxes
-' function: find bounding rectangles which covers most pixels & 
-			use compact area
-' input: contours(list of contours in the image),
-		 edges(edge-detected image)
+' function: find bounding rectangles which covers most pixels & use compact area
+' input: contours(list of contours in the image),edges(edge-detected image)
 ' output: list of optimal bounding rectangles
 '''
 def find_optimal_bounding_boxes(contours, edges):
@@ -202,13 +232,13 @@ def find_optimal_bounding_boxes(contours, edges):
     boxes.sort(key=lambda x: -x['count'])
     total = numpy.sum(edges) / 255
     #print boxes
-
+    
     while len(boxes) > 0:
         box = boxes[0]
         del boxes[0]
         rect = box['x1'], box['y1'], box['x2'], box['y2']
         covered_count = box['count']
-
+        
         while covered_count < total:
             bChanged = False
             for j, box2 in enumerate(boxes):
@@ -223,12 +253,151 @@ def find_optimal_bounding_boxes(contours, edges):
                 break
 
         total = total - covered_count
+        
         optimal_boxes.append(rect)
 
     optimal_boxes.sort(key=lambda x: (x[0], x[1]))
     #print optimal_boxes
 
     return optimal_boxes
+
+def find_vlines(image, w, h):
+    V_THRESH = (int)(w * 0.4)
+    vlines = []
+    for x in range(w):
+        y1, y2 = (None,None)
+        black = 0
+        for y in range(h):
+            if pix[x,y] == (0,0,0):
+                black = black + 1
+                if not y1: y1 = y
+                y2 = y
+            else:
+                if black > V_THRESH:
+                    vlines.append((x,y1,x,y2))
+                y1, y2 = (None, None)    
+                black = 0
+        if black > V_THRESH:
+            vlines.append((x,y1,x,y2))
+    return vlines
+
+def find_hlines(image, w, h):
+    H_THRESH = (int)(h * 0.4)
+    hlines = []
+    for y in range(h):
+        x1, x2 = (None, None)
+        black = 0
+        horiz = []
+        for x in range(w):
+            if image[x,y] == (0,0,0):
+                black = black + 1
+                if not x1: x1 = x
+                x2 = x
+            else:
+                if black > H_THRESH:
+                    horiz.append((x1,y, x2,y))
+                black = 0
+                x1, x2 = (None, None)
+        if black > H_THRESH:
+            horiz.append((x1,y,x2,y))
+        if len(horiz) > 0:
+            hlines.append(horiz)
+    return hlines
+
+def find_cells(vlines, hlines):
+    cols = []
+    for i in range(0, len(vlines)):
+        for j in range(1, len(vlines[i])):
+            if vlines[i][j][0] - vlines[i][j-1][0] > 1:
+                cols.append((vlines[i][j-1][0],vlines[i][j-1][1],vlines[i][j][2],vlines[i][j][3]))
+
+    rows = []
+    for i in range(1, len(hlines)):
+        if hlines[i][1] - hlines[i-1][3] > 1:
+            rows.append((hlines[i-1][0],hlines[i-1][1],hlines[i][2],hlines[i][3]))
+    
+    cells = {}
+    for i, row in enumerate(rows):
+        cells.setdefault(i, {})
+        for j, col in enumerate(cols):
+            x1 = col[0]
+            y1 = row[1]
+            x2 = col[2]
+            y2 = row[3]
+            cells[i][j] = (x1,y1,x2,y2)
+    return cells
+
+def extract_table(image):
+    w, h = image.shape[0], image.shape[1]
+    hlines = get_hlines(image, w, h)
+    vlines = get_vlines(image, w, h)
+    cells = get_cells(vlines, hlines)
+    
+    # put the table information in the class and return it
+
+    return
+
+'''
+' name: rotate_image
+' function: fix a tilted image, if the largest bounding rect is rotated
+' input: image(image numpy array), contours(countours found in the image)
+' output: rotation-fixed image
+'''
+def rotate_image(image):
+    """
+    find the whole contours and make a numpy array
+        make a rotated bounding box, and rotate the image
+    """
+    edges = cv2.Canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 100, 200)
+    _,contours,_ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+    points = []
+    for h, cnt in enumerate(contours):
+                area = cv2.contourArea(cnt)
+                if area >= 10:
+                    for p in cnt:
+                        points.append(p[0])
+                        
+    points = numpy.array(points)              
+    rect = cv2.minAreaRect(points)
+    """
+    DEBUG
+    box = cv2.boxPoints(rect)
+    box = numpy.int0(box)
+    mask = numpy.zeros((image.shape),numpy.uint8)
+    cv2.drawContours(mask,[box],0,(0,0,255),2)
+    cv2.imwrite('{}_{}.png'.format('rotbox',rect[2]), mask)
+    """
+    angle = abs(rect[2])
+    if angle > 45: angle = angle - 90 
+    mat = cv2.getRotationMatrix2D(rect[0], -angle, 1)
+    image = cv2.warpAffine(image, mat, (image.shape[1], image.shape[0]), image.size, cv2.INTER_CUBIC, cv2.BORDER_CONSTANT, (255,255,255))
+    
+    """
+    find the simple contours(four points) of the rotated image
+        and do the perspective transform(to fix a curvature)
+    
+    edges = cv2.Canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 100, 200)
+    _,contours,_ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    lefttop = (-1, -1)
+    leftbottom = (-1, image.shape[1]+1)
+    righttop = (image.shape[0]+1, -1)
+    rightbottom = (image.shape[0]+1, image.shape[1]+1)
+    coord = []
+    for h, cnt in enumerate(contours):
+        for p in cnt:
+            if (lefttop == -1) || (p[0][0] < lefttop[0]):
+                if p[0][1] < lefttop[1]:
+                    coord.append(p[0])
+    """                
+    #pts1 = numpy.array([[rect[0], rect[1]], [rect[0]+rect[2], rect[1]], [rect[0], rect[1]+rect[3]], [rect[0]+rect[2],rect[1]+rect[3]]], numpy.float32)
+    #pts2 = numpy.array([[rect[0]*50,rect[1]*50],[(rect[0]+rect[2])*50-1,rect[1]*50],[rect[0]*50,(rect[1]+rect[3])*50-1],[(rect[0]+rect[2])*50-1,(rect[1]+rect[3])*50-1]], numpy.float32)
+    #retval = cv2.getPerspectiveTransform(pts1,pts2)
+    #warp = cv2.warpPerspective(rot_img,retval,(int(rect[2]),int(rect[3])))
+    #cv2.imwrite('warpped_0.png', warp)
+    
+    #cv2.imwrite('ratated_img.png', image)
+    
+    return image
 
 '''
 ' name: open_image
@@ -238,7 +407,8 @@ def find_optimal_bounding_boxes(contours, edges):
 '''
 def open_image(path):
     #image = Image.open(path)
-    image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    image = cv2.imread(path)
+    #image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     #image = Image.fromarray(numpy.uint8(image))
     # solve auto-rotated problem after Image.open()
     '''
@@ -280,25 +450,27 @@ def shrink_image(image):
 ' output: None
 '''
 def preprocess_image(path, out_path):
-    #denoised_img = denoising(arr_img)
-    #binary_img = thresholding(denoised_img)
     original_image = open_image(path)
-
+    #rot_img = rotate_image(original_image)
     scale, shrink_img = shrink_image(original_image)
-    #shrink_arr = numpy.asarray(shrink_img)
-
-    #gray_img = cv2.cvtColor(arr_img ,cv2.COLOR_BGR2GRAY, gray_img)
-    edges = cv2.Canny(shrink_img, 100, 200)
     
+    edges = cv2.Canny(cv2.cvtColor(shrink_img, cv2.COLOR_BGR2GRAY), 100, 200)
     _,contours,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    #rot_img = rotate_image(shrink_img, contours)
+    #edges = cv2.Canny(cv2.cvtColor(rot_img, cv2.COLOR_BGR2GRAY), 100, 200)
+    #_,contours,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
     borders = lookup_borders(contours, edges)
-    borders.sort(key=(lambda i, x1, y1, x2, y2: (x2 - x1) * (y2 - y1)))
+    #print(borders)
+    borders.sort(key=(lambda x: (x[2]-x[0]) * (x[3]-x[1])))
 
     border_contour = None
     if len(borders):
         border_contour = contours[borders[0][0]]
         edges = remove_border(border_contour, edges)
 
+        
     edges = 255 * (edges > 0).astype(numpy.uint8)
     #print edges
 
@@ -315,14 +487,17 @@ def preprocess_image(path, out_path):
         return
 
     #print contours
-
+    
     # 2016-10-15 mjkim. handle multiple text areas
     boxes = find_optimal_bounding_boxes(contours, edges)
     for i, rect in enumerate(boxes):
-        # make cutting image from original
-        # if you want to return the image of original size, use below codes
+        """
+        make cutting image from original
+            if you want to return the image of original size, use below codes
+        """
         rect = [int(x / scale) for x in rect]
         text_img = original_image[rect[1]:rect[3], rect[0]:rect[2]]
+        
         # text_img = shrink_img[rect[1]:rect[3], rect[0]:rect[2]]
         #text_img = original_image.crop(rect)
         # if you want to make cutting image from downscaled gray_image, use these codes
@@ -337,7 +512,8 @@ def preprocess_image(path, out_path):
         #text_arr = numpy.array(text_arr, dtype=numpy.uint8)
         #text_arr = text_arr.reshape((height, width, 3))
         denoised_img = denoising(text_img)
-        binary_img = thresholding(denoised_img)
+        rot_img = rotate_image(denoised_img)
+        binary_img = thresholding(rot_img)
         outfname = '{}_{}.png'.format(out_path, i)
         cv2.imwrite(outfname, binary_img)
         
@@ -355,7 +531,7 @@ if __name__ == '__main__' :
     else :
         path = sys.argv[1]
         out_path = path[:-4]
-        out_path = out_path + '_crop.png'
+        out_path = out_path + '_crop'
         preprocess_image(path, out_path)
 
 """
