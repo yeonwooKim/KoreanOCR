@@ -1,6 +1,7 @@
 from __future__ import division
 import cv2
 import numpy as np
+import statistics
 from util import *
 
 #if __name__ == '__main__':
@@ -57,8 +58,18 @@ def label_paragraph(trunc_row, height):
 def get_line_imgs(img, trunc_row):
 	line_imgs = []
 	l = len(trunc_row)
+	height = []
 	for i in range (0, l):
-		line_imgs.append(trim_line(img[trunc_row[i][0]:trunc_row[i][1]]))
+		height.append(trunc_row[i][1] - trunc_row[i][0]);
+	
+	med_height = statistics.median(height)
+	for i in range (0, l):
+		im = trim_line(img[trunc_row[i][0]:trunc_row[i][1]])
+		# Add padding to english lines
+		bordersize = med_height - height[i]
+		if bordersize > 0:
+			im = cv2.copyMakeBorder(im, top=int(bordersize), bottom=0, left=0, right=0, borderType= cv2.BORDER_CONSTANT, value=[0,0,0] )
+		line_imgs.append(im)
 	return line_imgs
 
 # Implemented for testing; saves line images by paragraph and line number
