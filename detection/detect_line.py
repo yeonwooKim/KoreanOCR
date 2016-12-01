@@ -20,12 +20,12 @@ def find_line(img):
 	trunc_row = []
 	(row, _) = img.shape
 
-	blank_thd = 2 # Fix this to adjust blank line threshold
+	blank_thd = 2000 # Fix this to adjust blank line threshold
 	for i in range (0, row):
 		sum = sumup_row(img, i)
 		if sum >= blank_thd and start_idx == -1:
 			start_idx = i
-		elif (sum < blank_thd and start_idx == -1) or sum > 0:
+		elif (sum < blank_thd and start_idx == -1) or sum > blank_thd:
 			continue
 		elif sum < blank_thd and start_idx >= 0:
 			end_idx = i

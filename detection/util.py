@@ -36,7 +36,7 @@ def sumup_row(img, row_number):
 	(_, length) = img.shape
 	for i in range (0, length):
 		sum = sum + img.item(row_number, i)
-	return sum / length
+	return sum / length * 1000
 
 # Sums up the column pixel value of a given column in an image
 def sumup_col(img, col_number):
@@ -44,7 +44,7 @@ def sumup_col(img, col_number):
 	(length, _) = img.shape
 	for i in range (0, length):
 		sum = sum + img.item(i, col_number)
-	return sum / length
+	return sum / length * 1000
 
 # Trims line images
 def trim_line(img):

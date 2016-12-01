@@ -3,3 +3,4 @@ data/*.gz
 .ipynb_checkpoints/
 *.pyc
 **/.DS_Store
+detection/test/**

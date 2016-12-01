@@ -8,7 +8,7 @@ from util import *
 
 # If executed directly
 def run_direct():
-	original_img = cv2.imread('test/line_testing/test_book.png')
+	original_img = cv2.imread('test/line_testing/test_book2.png')
 	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 	(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 	(x, y) = im_bw.shape
@@ -61,7 +61,7 @@ def fst_pass(line):
 	start_letter, end_letter = -1, -1
 	wlist = []
 	
-	blank_thd = 5 # Fix this to adjust blank column threshold
+	blank_thd = 5100 # Fix this to adjust blank column threshold
 
 	(height, length) = line.shape
 	for i in range (0, length):
@@ -80,7 +80,7 @@ def fst_pass(line):
 		elif sum <= blank_thd:
 			end_letter = i
 			width = end_letter - start_letter
-			if (width >= 3):
+			if (width >= 4): # Fix this to adjust noise threshold
 				wlist.append(width)
 				word.append((start_letter, end_letter))
 			start_letter = -1
