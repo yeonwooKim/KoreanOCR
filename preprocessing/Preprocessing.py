@@ -1,27 +1,36 @@
 '''
 '   OCR Preprocessing Module
 '   Creative Integrated Design M
+'
+'   <Work Flow>
 '   1. denoise an image
 '   2. binarize an image
 '   3. crop an image according to the text area
+'   4. fix rotation of each layout image
+'   5. find tables in the image and put them in the table class
+'   6. if there are no tables in the image, put the image in the paragraph class
 '
-'   *To Do
-'   1. fix the tilted text area
-'   2. fix the curved book image
-'   3. upgrade denoise algorithm(?)
+'   <Data Structure>
+'   1. Table
+'      - store table information(cell's lefttop, rightbottom cutting points) & image
+'   2. Paragraph
+'      - store an image(which does not contain any tables)
+'
 '''
 import os
 import sys
 
 import numpy
 import cv2
-#from PIL import Image, ImageDraw, ExifTags
 from scipy.ndimage.filters import rank_filter
 
+import table
+
 '''
-' name: 
-' function: 
-' method: 
+' name: Table
+' function: store table's information & image containing table
+' member data: info(cell's lefttop, rightbottom cutting points), img
+' method: getInfo, getImage
 '''
 class Table(object):
     def __init__(self, info, img):
@@ -39,9 +48,10 @@ class Table(object):
         return self.image
 
 '''
-' name: 
-' function: 
-' method:
+' name: Paragraph
+' function: store an image which does not contain any tables
+' member data: img
+' method: getImage
 '''
 class Paragraph(object):
     def __init__(self, img):
@@ -61,6 +71,7 @@ output: normal_img(denoised image)
 def denoising(rawimg):
     # normalize the image
     grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
+    #grayimg = cv2.GaussianBlur(grayimg,(5,5),0)
     mask = numpy.zeros((grayimg.shape),numpy.uint8)
     kernel1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(11,11))
     close = cv2.morphologyEx(grayimg,cv2.MORPH_CLOSE,kernel1)
@@ -68,13 +79,6 @@ def denoising(rawimg):
     normal_img = numpy.uint8(cv2.normalize(div,div,20,255,cv2.NORM_MINMAX))
     resultimg = cv2.cvtColor(normal_img,cv2.COLOR_GRAY2BGR)
     #cv2.imwrite('morphology_0.png', normal_img)
-    
-    # denoise image: mean_bilateral'
-    #bilat_img = cv2.bilateralFilter(normal_img, 3, 20, s0=10, s1=10)
-    #cv2.imwrite('bilateral_sample_0.png', bilat_img)    
-
-    # algorithm below is too slow
-    #denoiseimg = cv2.fastNlMeansDenoising(contrastimg,None,10,7,21)
     
     return resultimg
     
@@ -115,8 +119,9 @@ output: binary image
 '''
 def thresholding(rawimg):
     grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
-    binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
-                          cv2.THRESH_BINARY_INV, 11, 2)
+    binary_img = cv2.adaptiveThreshold(~grayimg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2);
+    #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+    #                      cv2.THRESH_BINARY_INV, 11, 2)
     resultimg = cv2.cvtColor(binary_img,cv2.COLOR_GRAY2BGR)
     return resultimg
 
@@ -129,9 +134,6 @@ def thresholding(rawimg):
 def find_boundingrect(contours, edges):
     boxes = []
     for c in contours:
-        #rect = cv2.minAreaRect(c)
-        #box = cv2.boxPoints(rect)
-        #box = numpy.int0(box)
         x,y,w,h = cv2.boundingRect(c)
         image = numpy.zeros(edges.shape)
         cv2.drawContours(image, [c], 0, 255, -1)
@@ -158,7 +160,6 @@ def lookup_borders(contours, edges):
     for i, c in enumerate(contours):
         x,y,w,h = cv2.boundingRect(c)
         if w * h > 0.5 * area:
-            print(i, x, y, x+w-1, y+h-1)
             borders.append((i, x, y, x + w - 1, y + h - 1))
     return borders
 
@@ -169,9 +170,6 @@ def lookup_borders(contours, edges):
 ' output: border-removed image
 ''' 
 def remove_border(contour, edges):
-    # Use a rotated rectangle (should be a good approximation of a border).
-    # If it's far from a right angle, it's probably two sides of a border and
-    # we should use the bounding box instead.
     image = numpy.zeros(edges.shape)
     r = cv2.minAreaRect(contour)
     degs = r[2]
@@ -187,7 +185,12 @@ def remove_border(contour, edges):
 
     return numpy.minimum(image, edges)
 
-# Dilate using an NxN [+] sign shape
+'''
+' name: expand_image
+' function: dilate an image using NxN + shape
+' input: edges(edge-detected image), N(size of a kernel), iterations(number of iterations)
+' output: dilated image
+''' 
 def expand_image(edges, N, iterations): 
     arr = numpy.zeros((N,N), dtype=numpy.uint8)
     half = int((N-1)/2)
@@ -201,12 +204,11 @@ def expand_image(edges, N, iterations):
 
 '''
 ' name: find_connected_components
-' function: find contours from the given edge-detected image
+' function: dilate the image until contours in the image is <= 16
 ' input: edges(edge-detected image)
 ' output: list of contours
 '''
 def find_connected_components(edges):
-    # Perform increasingly aggressive expansion until there are just a few connected components.
     n = 1
     count = 21
     while count > 16:
@@ -218,7 +220,6 @@ def find_connected_components(edges):
     #Image.fromarray(255 * expanded_image).show()
     return contours
 
-#Find rects of text areas and Returns a list of (x1, y1, x2, y2) tuples.
 '''
 ' name: find_optimal_bounding_boxes
 ' function: find bounding rectangles which covers most pixels & use compact area
@@ -231,7 +232,6 @@ def find_optimal_bounding_boxes(contours, edges):
     boxes = find_boundingrect(contours, edges)
     boxes.sort(key=lambda x: -x['count'])
     total = numpy.sum(edges) / 255
-    #print boxes
     
     while len(boxes) > 0:
         box = boxes[0]
@@ -257,85 +257,53 @@ def find_optimal_bounding_boxes(contours, edges):
         optimal_boxes.append(rect)
 
     optimal_boxes.sort(key=lambda x: (x[0], x[1]))
-    #print optimal_boxes
-
+    
     return optimal_boxes
 
-def find_vlines(image, w, h):
-    V_THRESH = (int)(w * 0.4)
-    vlines = []
-    for x in range(w):
-        y1, y2 = (None,None)
-        black = 0
-        for y in range(h):
-            if pix[x,y] == (0,0,0):
-                black = black + 1
-                if not y1: y1 = y
-                y2 = y
-            else:
-                if black > V_THRESH:
-                    vlines.append((x,y1,x,y2))
-                y1, y2 = (None, None)    
-                black = 0
-        if black > V_THRESH:
-            vlines.append((x,y1,x,y2))
-    return vlines
-
-def find_hlines(image, w, h):
-    H_THRESH = (int)(h * 0.4)
-    hlines = []
-    for y in range(h):
-        x1, x2 = (None, None)
-        black = 0
-        horiz = []
-        for x in range(w):
-            if image[x,y] == (0,0,0):
-                black = black + 1
-                if not x1: x1 = x
-                x2 = x
-            else:
-                if black > H_THRESH:
-                    horiz.append((x1,y, x2,y))
-                black = 0
-                x1, x2 = (None, None)
-        if black > H_THRESH:
-            horiz.append((x1,y,x2,y))
-        if len(horiz) > 0:
-            hlines.append(horiz)
-    return hlines
-
-def find_cells(vlines, hlines):
-    cols = []
-    for i in range(0, len(vlines)):
-        for j in range(1, len(vlines[i])):
-            if vlines[i][j][0] - vlines[i][j-1][0] > 1:
-                cols.append((vlines[i][j-1][0],vlines[i][j-1][1],vlines[i][j][2],vlines[i][j][3]))
-
-    rows = []
-    for i in range(1, len(hlines)):
-        if hlines[i][1] - hlines[i-1][3] > 1:
-            rows.append((hlines[i-1][0],hlines[i-1][1],hlines[i][2],hlines[i][3]))
+'''
+' name: find_table_area
+' function: find the area that table exists
+' input: image
+' output: list of images that contain a table
+'''
+def find_table_area(image):
+    edges = cv2.Canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 100, 200)
+    _, contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    cells = {}
-    for i, row in enumerate(rows):
-        cells.setdefault(i, {})
-        for j, col in enumerate(cols):
-            x1 = col[0]
-            y1 = row[1]
-            x2 = col[2]
-            y2 = row[3]
-            cells[i][j] = (x1,y1,x2,y2)
-    return cells
-
-def extract_table(image):
-    w, h = image.shape[0], image.shape[1]
-    hlines = get_hlines(image, w, h)
-    vlines = get_vlines(image, w, h)
-    cells = get_cells(vlines, hlines)
+    max_cnt = []
+    rects = []
+    for cnt in contours:
+        x,y,w,h = cv2.boundingRect(cnt)
+        rect = (x, y, x+w, y+h)
+        rects.append(rect)
     
-    # put the table information in the class and return it
-
-    return
+    
+    #rects.sort(key = lambda x: (x[1], x[0]))
+    rects.sort(key = lambda x: (x[2]-x[0])*(x[3]-x[1]), reverse=True)
+    
+    selected_rect = []
+    for rect in rects:
+        if (rect[2]-rect[0])*(rect[3]-rect[1]) > image.shape[0]*image.shape[1]*0.1:
+            has_intersection = False
+            for r in selected_rect:
+                if check_intersection(rect, r): 
+                    has_intersection = True
+                    break
+            if has_intersection is False:
+                selected_rect.append(rect)
+                
+    selected_rect.sort(key = lambda x: [x[1], x[0]], reverse = False)
+    selected_rect[1:3] = sorted(selected_rect[1:3], key = lambda x: x[0])
+    tables = []
+    for r in selected_rect:
+        #mask = numpy.zeros((image.shape),numpy.uint8)
+        #cv2.drawContours(mask, [c], 0, (255,255,255), -1)
+        #cv2.drawContours(mask, [c], 0, (0,0,0), 2)
+        #table_img = cv2.bitwise_and(image,mask)
+        table_img = image[r[1]-5:r[3]+5, r[0]-5:r[2]+5]
+        tables.append(table_img)    
+    
+    return tables
 
 '''
 ' name: rotate_image
@@ -372,31 +340,6 @@ def rotate_image(image):
     mat = cv2.getRotationMatrix2D(rect[0], -angle, 1)
     image = cv2.warpAffine(image, mat, (image.shape[1], image.shape[0]), image.size, cv2.INTER_CUBIC, cv2.BORDER_CONSTANT, (255,255,255))
     
-    """
-    find the simple contours(four points) of the rotated image
-        and do the perspective transform(to fix a curvature)
-    
-    edges = cv2.Canny(cv2.cvtColor(image, cv2.COLOR_BGR2GRAY), 100, 200)
-    _,contours,_ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    lefttop = (-1, -1)
-    leftbottom = (-1, image.shape[1]+1)
-    righttop = (image.shape[0]+1, -1)
-    rightbottom = (image.shape[0]+1, image.shape[1]+1)
-    coord = []
-    for h, cnt in enumerate(contours):
-        for p in cnt:
-            if (lefttop == -1) || (p[0][0] < lefttop[0]):
-                if p[0][1] < lefttop[1]:
-                    coord.append(p[0])
-    """                
-    #pts1 = numpy.array([[rect[0], rect[1]], [rect[0]+rect[2], rect[1]], [rect[0], rect[1]+rect[3]], [rect[0]+rect[2],rect[1]+rect[3]]], numpy.float32)
-    #pts2 = numpy.array([[rect[0]*50,rect[1]*50],[(rect[0]+rect[2])*50-1,rect[1]*50],[rect[0]*50,(rect[1]+rect[3])*50-1],[(rect[0]+rect[2])*50-1,(rect[1]+rect[3])*50-1]], numpy.float32)
-    #retval = cv2.getPerspectiveTransform(pts1,pts2)
-    #warp = cv2.warpPerspective(rot_img,retval,(int(rect[2]),int(rect[3])))
-    #cv2.imwrite('warpped_0.png', warp)
-    
-    #cv2.imwrite('ratated_img.png', image)
-    
     return image
 
 '''
@@ -406,25 +349,10 @@ def rotate_image(image):
 ' output: opened image
 '''
 def open_image(path):
-    #image = Image.open(path)
     image = cv2.imread(path)
     #image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
-    #image = Image.fromarray(numpy.uint8(image))
+    
     # solve auto-rotated problem after Image.open()
-    '''
-    for orientation in ExifTags.TAGS.keys() : 
-        if ExifTags.TAGS[orientation]=='Orientation' : break 
-    if (image._getexif() == None):
-        return image;
-    exif=dict(image._getexif().items())
-
-    if exif[orientation] == 3 : 
-        image = image.rotate(180, expand=True)
-    elif exif[orientation] == 6 : 
-        image = image.rotate(270, expand=True)
-    elif exif[orientation] == 8 : 
-        image = image.rotate(90, expand=True)
-    '''
     return image
 
 '''
@@ -440,7 +368,6 @@ def shrink_image(image):
     
     scale = 1.0 * MAX_DIM / max(image.shape[0], image.shape[1])
     new_image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-    # new_image = image.resize((int(w * scale), int(h * scale)), Image.ANTIALIAS)
     return scale, new_image
 
 '''
@@ -451,18 +378,12 @@ def shrink_image(image):
 '''
 def preprocess_image(path, out_path):
     original_image = open_image(path)
-    #rot_img = rotate_image(original_image)
     scale, shrink_img = shrink_image(original_image)
     
     edges = cv2.Canny(cv2.cvtColor(shrink_img, cv2.COLOR_BGR2GRAY), 100, 200)
     _,contours,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    #rot_img = rotate_image(shrink_img, contours)
-    #edges = cv2.Canny(cv2.cvtColor(rot_img, cv2.COLOR_BGR2GRAY), 100, 200)
-    #_,contours,_ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    
     borders = lookup_borders(contours, edges)
-    #print(borders)
     borders.sort(key=(lambda x: (x[2]-x[0]) * (x[3]-x[1])))
 
     border_contour = None
@@ -472,8 +393,7 @@ def preprocess_image(path, out_path):
 
         
     edges = 255 * (edges > 0).astype(numpy.uint8)
-    #print edges
-
+    
     # Remove ~1px borders using a rank filter.
     maxed_rows = rank_filter(edges, -4, size=(1, 20))
     maxed_cols = rank_filter(edges, -4, size=(20, 1))
@@ -486,10 +406,9 @@ def preprocess_image(path, out_path):
         print ('    -> There is no text in the image.')
         return
 
-    #print contours
-    
-    # 2016-10-15 mjkim. handle multiple text areas
+    # 2016-10-15. handle multiple text areas
     boxes = find_optimal_bounding_boxes(contours, edges)
+    layouts = []
     for i, rect in enumerate(boxes):
         """
         make cutting image from original
@@ -498,34 +417,41 @@ def preprocess_image(path, out_path):
         rect = [int(x / scale) for x in rect]
         text_img = original_image[rect[1]:rect[3], rect[0]:rect[2]]
         
-        # text_img = shrink_img[rect[1]:rect[3], rect[0]:rect[2]]
-        #text_img = original_image.crop(rect)
+        """
+        # use the shrinked image as a result
+        text_img = shrink_img[rect[1]:rect[3], rect[0]:rect[2]]
+        text_img = original_image.crop(rect)
         # if you want to make cutting image from downscaled gray_image, use these codes
-        # text_image = gray_image.crop(rect)
+        text_image = gray_image.crop(rect)
+        """
         
-        #text_img = text_img.convert('L')
-        #text_arr = numpy.asarray(text_img)
-        #(width, height) = text_img
-        
-        
-        #text_arr = list(text_img.getdata())
-        #text_arr = numpy.array(text_arr, dtype=numpy.uint8)
-        #text_arr = text_arr.reshape((height, width, 3))
         denoised_img = denoising(text_img)
         rot_img = rotate_image(denoised_img)
-        binary_img = thresholding(rot_img)
-        outfname = '{}_{}.png'.format(out_path, i)
-        cv2.imwrite(outfname, binary_img)
         
-        print ('    -> %s' % (outfname))
+        tables = find_table_area(rot_img)
+        # there is no table in the image
+        if len(tables) == 0:
+            binary_img = thresholding(rot_img)
+            parag = Paragraph(binary_img)
+            layouts.append(parag)
+            outfname = '{}_{}_{}.png'.format(out_path, 'paragraph', i)
+            cv2.imwrite(outfname, binary_img)
+            print ('    -> %s' % (outfname))
+        else:    
+            for j, t in enumerate(tables):
+                outfname = '{}_{}_{}_{}.png'.format(out_path, 'table', i, j)
+                info = table.find_table(t)
+                binary_img = thresholding(t)
+                cv2.imwrite(outfname, binary_img)
+                tab = Table(binary_img, info)
+                layouts.append(tab)
+                print ('    -> %s' % (outfname))
+                print(info)
         
-
+    print(layouts)    
+    return layouts
+        
 if __name__ == '__main__' :
-    '''
-    path = 'rec_sample_2.jpg'
-    outpath = 'rec_crpped_0.png'
-    preprocess_image(path, outpath)
-    '''
     if len(sys.argv) != 2 :
         print("usage: python Preprocessing.py <path-to-image>")
     else :
@@ -533,19 +459,3 @@ if __name__ == '__main__' :
         out_path = path[:-4]
         out_path = out_path + '_crop'
         preprocess_image(path, out_path)
-
-"""
-    if len(sys.argv) == 2 and '*' in sys.argv[1]:
-        files = glob.glob(sys.argv[1])
-        random.shuffle(files)
-    else:
-        files = sys.argv[1:]
-
-    for path in files:
-        out_path = path.replace('.jpg', '.crop.png')
-        if os.path.exists(out_path): continue
-        try:
-            process_image(path, out_path)
-        except Exception as e:
-            print '%s %s' % (path, e)
-"""
