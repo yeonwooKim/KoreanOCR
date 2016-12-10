@@ -407,7 +407,7 @@ def preprocess_image(img, out_path=None, save=False):
     # print ('input file: %s' % (path))
     contours = find_connected_components(edges)
     if len(contours) == 0:
-        print ('    -> There is no text in the image.')
+        #print ('    -> There is no text in the image.')
         return
 
     # 2016-10-15. handle multiple text areas
@@ -452,9 +452,9 @@ def preprocess_image(img, out_path=None, save=False):
                     print ('    -> %s' % (outfname))
                 tab = Table(binary_img, info)
                 layouts.append(tab)
-                print(info)
+                #print(info)
         
-    print(layouts)    
+    #print(layouts)    
     return layouts
         
 if __name__ == '__main__' :

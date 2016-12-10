@@ -5,8 +5,7 @@
 from flask import Flask, render_template, request
 import cv2
 import numpy as np
-import examine
-from PIL import Image
+from daemon import client
 
 app = Flask(__name__)
 
@@ -35,12 +34,12 @@ def view_upload():
     blob = f.read()
     size = len(blob)
     blob_array = np.asarray(bytearray(blob), dtype=np.uint8)
+
     #img = cv2.imdecode(blob_array, cv2.IMREAD_COLOR) # 이미지를 디코드 후 numpy array로 변환
-    img = examine.pil_to_cv(Image.open(f))
+    analyzed = client.send(bytearray(blob))
     #plt.figure(num=None, figsize=(3, 3), facecolor='w', edgecolor='k')
     #plt.imshow(img, interpolation="none", cmap=plt.get_cmap("gray"))
     #plt.show()
-    analyzed = examine.get_txt(img)
 
     ret = ( "name : %s\n" % f.filename +
             "size : %s\n" % sizeof_fmt(size) +

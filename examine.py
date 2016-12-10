@@ -14,8 +14,6 @@ import chrecog
 from preprocessing import preprocess_image
 from detection.util import CHARTYPE, Char, Line, Paragraph
 
-import matplotlib.pyplot as plt
-
 pid = os.getpid()
 
 def print_msg(msg):
@@ -79,9 +77,10 @@ def get_char(img):
     return reconst.build_graphs(graphs)
 
 def pil_to_cv(image):
+    if image is None: return None
     for orientation in ExifTags.TAGS.keys(): 
         if ExifTags.TAGS[orientation]=='Orientation' : break 
-    if image._getexif() is not None:
+    if hasattr(image, "_getexif"):
         exif = dict(image._getexif().items())
         if exif[orientation] == 3:
             image = image.rotate(180, expand=True)
