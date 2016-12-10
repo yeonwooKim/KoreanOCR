@@ -1,5 +1,5 @@
 import tensorflow as tf
-from chrecog.core import *
+from chrecog.core_2IDR2 import *
 from concurrent.futures import ThreadPoolExecutor
 from data.buffer import *
 from hangul_utils import join_jamos_char
