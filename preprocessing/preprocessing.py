@@ -122,8 +122,8 @@ def thresholding(rawimg):
     binary_img = cv2.adaptiveThreshold(~grayimg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2);
     #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
     #                      cv2.THRESH_BINARY_INV, 11, 2)
-    resultimg = cv2.cvtColor(binary_img,cv2.COLOR_GRAY2BGR)
-    return resultimg
+    #resultimg = cv2.cvtColor(binary_img,cv2.COLOR_GRAY2BGR)
+    return binary_img
 
 '''
 ' name: find_boundingrect
@@ -376,8 +376,12 @@ def shrink_image(image):
 ' input: path to load image from, path to store image to
 ' output: None
 '''
-def preprocess_image(path, out_path=None, save=False):
-    original_image = open_image(path)
+def preprocess_image(img, out_path=None, save=False):
+    # If not BGR, make it BGR to avoid error
+    if len(img.shape) < 3:
+        original_image = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+    else:
+        original_image = img
     scale, shrink_img = shrink_image(original_image)
     
     edges = cv2.Canny(cv2.cvtColor(shrink_img, cv2.COLOR_BGR2GRAY), 100, 200)
@@ -400,7 +404,7 @@ def preprocess_image(path, out_path=None, save=False):
     debordered = numpy.minimum(numpy.minimum(edges, maxed_rows), maxed_cols)
     edges = debordered
 
-    print ('input file: %s' % (path))
+    # print ('input file: %s' % (path))
     contours = find_connected_components(edges)
     if len(contours) == 0:
         print ('    -> There is no text in the image.')
@@ -437,7 +441,7 @@ def preprocess_image(path, out_path=None, save=False):
             if save:
                 outfname = '{}_{}_{}.png'.format(out_path, 'paragraph', i)
                 cv2.imwrite(outfname, binary_img)
-            print ('    -> %s' % (outfname))
+                print ('    -> %s' % (outfname))
         else:    
             for j, t in enumerate(tables):
                 info = table.find_table(t)
@@ -445,9 +449,9 @@ def preprocess_image(path, out_path=None, save=False):
                 if save:
                     outfname = '{}_{}_{}_{}.png'.format(out_path, 'table', i, j)
                     cv2.imwrite(outfname, binary_img)
+                    print ('    -> %s' % (outfname))
                 tab = Table(binary_img, info)
                 layouts.append(tab)
-                print ('    -> %s' % (outfname))
                 print(info)
         
     print(layouts)    
@@ -460,4 +464,4 @@ if __name__ == '__main__' :
         path = sys.argv[1]
         out_path = path[:-4]
         out_path = out_path + '_crop'
-        layouts = preprocess_image(path, out_path, save=True)
+        layouts = preprocess_image(open_image(path), out_path, save=True)

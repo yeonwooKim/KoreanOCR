@@ -5,10 +5,12 @@ from hangul_utils import join_jamos_char
 from data import en_chset, ko_chset_cho, ko_chset_jung, ko_chset_jong
 from detection.util import CHARTYPE
 from data.buffer import *
-from chrecog.core_2IDR2 import *
+#from chrecog.core_2IDR2 import *
+from chrecog.core_BN2 import *
 
 sess = tf.Session()
-load_ckpt(sess, "data/ckpt/161104_2IDR2.ckpt")
+#load_ckpt(sess, "data/ckpt/161104_2IDR2.ckpt")
+load_ckpt(sess, "data/ckpt/161117_BN2.ckpt")
 
 def get_session():
     return sess

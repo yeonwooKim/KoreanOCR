@@ -54,8 +54,8 @@ def eval_tail(c, cand):
     if hasattr(c, "prob") and c.value is not None and len(c.value) > 0 and len(cand.value) > 0:
         if c.value == '\'':
             point += 2
-        if cand.prob > 0.99 and check_syllable(c.value) and split_syllable_char(c.value)[1] == 'ㅏ':
-            point += 2
+        #if cand.prob > 0.99 and check_syllable(c.value) and split_syllable_char(c.value)[1] == 'ㅏ':
+        #    point += 2
 
     return cand.tail + 1 - point
 
@@ -109,8 +109,8 @@ def try_split_rotten(char):
     char.prob = max(min(lpred.sure, rpred.sure) - 0.4, 0)
     char.value = lpred.candidate + rpred.candidate
     char.tail += 1
-    print("%d %d %d %s" % (spt[0], spt[1], spt[2], char.value))
-    draw_subplot([limg, rimg], 2, 1)
+    #print("%d %d %d %s" % (spt[0], spt[1], spt[2], char.value))
+    #draw_subplot([limg, rimg], 2, 1)
     return True
 
 def merge_children(clist):
@@ -181,7 +181,7 @@ def analyze(graphs):
             #plt.subplot(len_l,1, i_l+1)
             #plt.imshow(l.img)
             analyze_recur(l.chars)
-            print_recur(i_l, 0, l.chars, True)
+            #print_recur(i_l, 0, l.chars, True)
             merge_children(l.chars)
             analyze_sibiling(l.chars)
             #for c in l.chars:

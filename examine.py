@@ -1,14 +1,18 @@
-import os, sys, getopt
-import numpy as np
+import getopt
+import os
+import sys
+from time import strftime
+
 import cv2
 
-import preproc
 import detection
-from detection.util import Paragraph, Line, Char, CHARTYPE
-from chrecog.predict import get_session, load_ckpt, get_pred
 import reconst
 import semantic
-from time import strftime
+import chrecog
+from preprocessing import preprocess_image
+from detection.util import CHARTYPE, Char, Line, Paragraph
+
+import matplotlib.pyplot as plt
 
 pid = os.getpid()
 
@@ -17,21 +21,31 @@ def print_msg(msg):
     print ("[%5d] %s %s" % (pid, time_str, msg))
 
 def simple_preproc(img, threshold=True):
-    if len(img.shape) > 2 :
+    if len(img.shape) > 2:
         grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    else :
+    else:
         grayscale_img = img
-        
+
     if not threshold:
         return grayscale_img
-    
+
     return cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
-# 이미지를 각 모듈에 순서대로 넘겨줌
-# 분석된 최종 문자열을 반환
-def get_txt(img):
+def get_txt(img, is_simple=False):
+    """이미지를 각 모듈에 순서대로 넘겨줌.
+    분석된 최종 문자열을 반환"""
     print_msg("preprocessing..")
-    processed_imgs = [preproc.process(img)]
+    if is_simple:
+        processed_imgs = [simple_preproc(img)]
+    else:
+        layouts = preprocess_image(img)
+        processed_imgs = []
+        for l in layouts:
+            if hasattr(l.image, "shape"):
+                #plt.figure(num=None, figsize=(3, 3), facecolor='w', edgecolor='k')
+                #plt.imshow(l.image, interpolation="none", cmap=plt.get_cmap("gray"))
+                #plt.show()
+                processed_imgs.append(l.image)
 
     print_msg("detecting..")
     graphs = []
@@ -39,8 +53,7 @@ def get_txt(img):
         graphs.extend(detection.get_graphs(processed))
 
     print_msg("recognizing..")
-    sess = get_session()
-    graphs = get_pred(graphs)
+    graphs = chrecog.predict.get_pred(graphs)
 
     print_msg("semantic..")
     graphs = semantic.analyze(graphs)
@@ -49,16 +62,16 @@ def get_txt(img):
     return reconst.build_graphs(graphs)
 
 msg_help = """python examine.py <image_path>
--l --letter letter mode"""
+-l --letter letter mode
+-i --invert invert image"""
 
 def get_char(img):
-    processed = preproc.process(img)
+    processed = simple_preproc(img)
     chars = [Char([0, processed.shape[1]], CHARTYPE.CHAR)]
     lines = [Line(processed, chars)]
     graphs = [Paragraph(lines)]
 
-    sess = get_session()
-    graphs = get_pred(graphs)
+    graphs = chrecog.predict.get_pred(graphs)
 
     graphs = semantic.analyze(graphs)
     return reconst.build_graphs(graphs)
@@ -66,8 +79,10 @@ def get_char(img):
 
 def main(argv):
     letter = False
+    is_simple = False
+    invert = False
     try:
-        opts, args = getopt.gnu_getopt(argv, "hl", ["help", "letter"])
+        opts, args = getopt.gnu_getopt(argv, "hli", ["help", "letter", "invert", "sp"])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
@@ -77,6 +92,10 @@ def main(argv):
             sys.exit()
         elif opt in ("-l", "--letter"):
             letter = True
+        elif opt in ("-i", "--invert"):
+            invert = True
+        elif opt in ("--sp"):
+            is_simple = True
 
     if len(args) != 1:
         print(msg_help)
@@ -87,8 +106,11 @@ def main(argv):
         print("Invalid image file")
         exit(1)
 
+    if invert:
+        img = 255-img
+
     if not letter:
-        print(get_txt(img))
+        print(get_txt(img, is_simple))
     else:
         print(get_char(img))
 
