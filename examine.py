@@ -4,6 +4,8 @@ import sys
 from time import strftime
 
 import cv2
+from PIL import Image, ExifTags
+import numpy as np
 
 import detection
 import reconst
@@ -76,6 +78,18 @@ def get_char(img):
     graphs = semantic.analyze(graphs)
     return reconst.build_graphs(graphs)
 
+def pil_to_cv(image):
+    for orientation in ExifTags.TAGS.keys(): 
+        if ExifTags.TAGS[orientation]=='Orientation' : break 
+    if image._getexif() is not None:
+        exif = dict(image._getexif().items())
+        if exif[orientation] == 3:
+            image = image.rotate(180, expand=True)
+        elif exif[orientation] == 6:
+            image = image.rotate(270, expand=True)
+        elif exif[orientation] == 8:
+            image = image.rotate(90, expand=True)
+    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
 def main(argv):
     letter = False
@@ -101,7 +115,7 @@ def main(argv):
         print(msg_help)
         sys.exit(2)
 
-    img = cv2.imread(args[0])
+    img = pil_to_cv(Image.open(args[0]))
     if img is None:
         print("Invalid image file")
         exit(1)
