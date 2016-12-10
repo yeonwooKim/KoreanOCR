@@ -19,23 +19,23 @@ def print_msg(msg):
 # 이미지를 각 모듈에 순서대로 넘겨줌
 # 분석된 최종 문자열을 반환
 def get_txt(img):
-    print_msg("preprocessing..");
+    print_msg("preprocessing..")
     processed_imgs = [preproc.process(img)]
 
-    print_msg("detecting..");
+    print_msg("detecting..")
     graphs = []
     for processed in processed_imgs:
         graphs.extend(detection.get_graphs(processed))
 
-    print_msg("recognizing..");
+    print_msg("recognizing..")
     sess = get_session()
     load_ckpt(sess, "data/ckpt/161117_BN2.ckpt")
     graphs = get_pred(graphs)
 
-    print_msg("semantic..");
+    print_msg("semantic..")
     graphs = semantic.analyze(graphs)
 
-    print_msg("reconst..");
+    print_msg("reconst..")
     return reconst.build_graphs(graphs)
 
 msg_help = """python examine.py <image_path>"""
@@ -55,9 +55,9 @@ def get_char(img):
 
 
 def main(argv):
-    letter=False
+    letter = False
     try:
-        opts, args = getopt.gnu_getopt(argv,"hl",["help", "letter"])
+        opts, args = getopt.gnu_getopt(argv, "hl", ["help", "letter"])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
@@ -66,14 +66,14 @@ def main(argv):
             print(msg_help)
             sys.exit()
         elif opt in ("-l", "--letter"):
-            letter=True
-    
+            letter = True
+
     if len(args) != 1:
         print(msg_help)
         sys.exit(2)
 
     img = cv2.imread(args[0])
-    if (img is None) :
+    if img is None:
         print("Invalid image file")
         exit(1)
 

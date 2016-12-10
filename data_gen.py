@@ -2,18 +2,22 @@
 # Used to generate composite data
 # python data_gen.py --help
 
-import sys, getopt
-from data import en_chset, gen
+import getopt
+import itertools
+import math
+import random
+import sys
+
 import matplotlib
+
+from data import en_chset, gen
+
 plot_disabled = False
 try:
     import matplotlib.pyplot as plt
 except ImportError:
     print("plt import error : plot disabled")
     plot_disabled = True
-import itertools
-import random
-import math
 
 msg_help = """python data_gen.py <save path>
 -h (help)
@@ -83,18 +87,18 @@ def show_example_all(ch, fonts, weights):
             continue
         sliced.append(gen.process_mat(mat))
     draw_subplot(sliced, math.ceil(len(sliced)/2), 2)
-    
+
 def show_example(ch):
     sliced = [gen.process_mat(gen.get_mat(ch)) for i in range(7)]
     draw_subplot(sliced, 1, 7)
-    
+
 def show_example_random():
     sliced = [gen.process_mat(gen.get_mat(get_random_ch())) for i in range(7)]
     draw_subplot(sliced, 1, 7)
-    
+
 #for ch in ".", ";", "2", ")", "가", "낢", "·", "《", "》", "「", "」", "『", "』" :
 #    show_example(ch)
-#    
+#
 #for i in range(3):
 #    show_example_random()
 
@@ -102,10 +106,10 @@ def generate_fonts(save_path, datasize, plot, force=False):
     fonts = gen.supported_fonts[:]
     weights = gen.supported_weights[:]
     unavailable = gen.get_unavailable(fonts)
-    if (len(unavailable)):
-        for str in unavailable:
-            print("%s not found" % str)
-            fonts.remove(str)
+    if len(unavailable):
+        for s in unavailable:
+            print("%s not found" % s)
+            fonts.remove(s)
         print("========")
         print("Please provide above fonts. After you install new ones,")
         print("make sure you run fc-cache -f -v or run with option -r,")

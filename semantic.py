@@ -2,6 +2,7 @@
 #plt.rcParams['image.cmap'] = 'Greys'
 from detection.util import CHARTYPE
 from chrecog.predict import get_pred_one, reshape_with_margin
+from hangul_utils import check_syllable, split_syllable_char
 import numpy as np
 
 def print_recur(i_l, indent, clist, force_print=False):
@@ -30,23 +31,54 @@ def analyze_recur(clist):
 
 # Analyze tail point which is the measure of too many splits.
 # Normally length - 1
-def eval_tail(cand):
+def eval_tail(c, cand):
     point = 0
     # Please please split the . and , symbols...!!
     if cand.value == '.' or cand.value == ',':
         point += 30
+
+    if hasattr(c, "prob") and c.value is not None and len(c.value) > 0 and len(cand.value) > 0:
+        if c.value == '\'':
+            point += 2
+        if cand.prob > 0.99 and check_syllable(c.value) and split_syllable_char(c.value)[1] == 'ㅏ':
+            point += 2
+
     return cand.tail + 1 - point
-        
+
+def find_split_pt(img):
+    minidx = None
+    minidxend = None
+    fixed = False
+    col = np.sum(img, axis=0)
+    for i in range(12, 20):
+        if minidx is None or col[minidx] > col[i]:
+            minidx = i
+            minidxend = i
+        elif col[minidx] == col[i] and not fixed:
+            minidxend = i
+        else:
+            fixed = True
+    #print("%d %d, %.4f" % (minidx, minidxend, col[minidx]))
+    return int((minidx+minidxend)/2)
 
 def try_split_rotten(char):
-    lpred = get_pred_one(reshape_with_margin(char.img[:, :16]))
-    rpred = get_pred_one(reshape_with_margin(char.img[:, 16:]))
-    if lpred.candidate is None or rpred.candidate is None:
-        return False
-    if lpred.sure < 0.9 or rpred.sure < 0.9:
-        return False
-    char.prob = min((lpred.sure, rpred.sure))
+    spt = find_split_pt(char.img)
+    lpred = get_pred_one(reshape_with_margin(char.img[:, :spt]))
+    rpred = get_pred_one(reshape_with_margin(char.img[:, spt:]))
+    if lpred.candidate is None and rpred.candidate is None:
+        char.value = "?"
+        char.rotten = 1
+        return
+    if lpred.candidate is None:
+        lpred.candidate = "?"
+        char.rotten = 1
+    elif rpred.candidate is None:
+        rpred.candidate = "?"
+        char.rotten = 1
+    char.prob = max(min(lpred.sure, rpred.sure) - 0.4, 0)
     char.value = lpred.candidate + rpred.candidate
+    char.tail += 1
+    print("%d %s" % (spt, char.value))
     return True
 
 # Take candidate with lowest 'rotten point'
@@ -62,23 +94,21 @@ def merge_children(clist):
                 cand = child
             elif child.rotten_point < cand.rotten_point:
                 cand = child
+                
         if cand is None:
             c.tail = 0
-            if c.value is None and not try_split_rotten(c):
-                c.value = "?"
-                c.rotten = 1
-            else:
-                c.rotten = 0
+            c.rotten = 0
+            if c.value is None:
+                try_split_rotten(c)
         else:
-            c.tail = eval_tail(cand)
+            c.tail = eval_tail(c, cand)
             if hasattr(c, "prob"):
                 c.prob = min(c.prob, cand.prob)
-                if c.value is None and not try_split_rotten(c):
-                    c.value = "?" + cand.value
-                    c.rotten = cand.rotten + 1
-                else:
-                    c.value += cand.value
-                    c.rotten = cand.rotten
+                c.rotten = 0
+                if c.value is None:
+                    try_split_rotten(c)
+                c.value += cand.value
+                c.rotten += cand.rotten
             else:
                 c.prob = cand.prob
                 c.value = cand.value
