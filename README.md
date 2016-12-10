@@ -1,10 +1,18 @@
 # KoreanOCR
 OCR program for Korean, SNU project 2016
 
-## How to run server
+## How to run web server
 #### Requirements
 * python 3
 * flask
+
+```bash
+$ python app.py
+```
+
+## How to run analysis daemon
+#### Requirements
+* python 3
 * numpy
 * scipy
 * tensorflow
@@ -12,8 +20,10 @@ OCR program for Korean, SNU project 2016
 * opencv-python
 
 ```bash
-$ python app.py
+$ python server.py
 ```
+
+Analysis daemon and web server communicates through localhost:1255.
 
 ## How to train
 #### Requirements
