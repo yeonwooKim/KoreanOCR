@@ -376,7 +376,7 @@ def shrink_image(image):
 ' input: path to load image from, path to store image to
 ' output: None
 '''
-def preprocess_image(path, out_path):
+def preprocess_image(path, out_path=None, save=False):
     original_image = open_image(path)
     scale, shrink_img = shrink_image(original_image)
     
@@ -434,15 +434,17 @@ def preprocess_image(path, out_path):
             binary_img = thresholding(rot_img)
             parag = Paragraph(binary_img)
             layouts.append(parag)
-            outfname = '{}_{}_{}.png'.format(out_path, 'paragraph', i)
-            cv2.imwrite(outfname, binary_img)
+            if save:
+                outfname = '{}_{}_{}.png'.format(out_path, 'paragraph', i)
+                cv2.imwrite(outfname, binary_img)
             print ('    -> %s' % (outfname))
         else:    
             for j, t in enumerate(tables):
-                outfname = '{}_{}_{}_{}.png'.format(out_path, 'table', i, j)
                 info = table.find_table(t)
                 binary_img = thresholding(t)
-                cv2.imwrite(outfname, binary_img)
+                if save:
+                    outfname = '{}_{}_{}_{}.png'.format(out_path, 'table', i, j)
+                    cv2.imwrite(outfname, binary_img)
                 tab = Table(binary_img, info)
                 layouts.append(tab)
                 print ('    -> %s' % (outfname))
@@ -458,4 +460,4 @@ if __name__ == '__main__' :
         path = sys.argv[1]
         out_path = path[:-4]
         out_path = out_path + '_crop'
-        preprocess_image(path, out_path)
+        layouts = preprocess_image(path, out_path, save=True)

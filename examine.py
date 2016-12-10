@@ -16,6 +16,17 @@ def print_msg(msg):
     time_str = strftime("%Y-%m-%d %H:%M:%S")
     print ("[%5d] %s %s" % (pid, time_str, msg))
 
+def simple_preproc(img, threshold=True):
+    if len(img.shape) > 2 :
+        grayscale_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else :
+        grayscale_img = img
+        
+    if not threshold:
+        return grayscale_img
+    
+    return cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
 # 이미지를 각 모듈에 순서대로 넘겨줌
 # 분석된 최종 문자열을 반환
 def get_txt(img):

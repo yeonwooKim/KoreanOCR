@@ -36,9 +36,10 @@ def view_upload():
     blob_array = np.asarray(bytearray(blob), dtype=np.uint8)
     img = cv2.imdecode(blob_array, 0) # 이미지를 디코드 후 numpy array로 변환
     analyzed = examine.get_txt(img)
+
     ret = ( "name : %s\n" % f.filename +
             "size : %s\n" % sizeof_fmt(size) +
-            "dimension : %d X %d\n" % (img.shape[1], img.shape[0]) +
+            #dimension : %d X %d\n" % (img.shape[1], img.shape[0]) +
             "\n<Analysis>\n%s" % analyzed)
     return ret
 
