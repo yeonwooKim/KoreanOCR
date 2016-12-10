@@ -5,9 +5,10 @@ from hangul_utils import join_jamos_char
 from data import en_chset, ko_chset_cho, ko_chset_jung, ko_chset_jong
 from detection.util import CHARTYPE
 from data.buffer import *
-from chrecog.core import *
+from chrecog.core_2IDR2 import *
 
 sess = tf.Session()
+load_ckpt(sess, "data/ckpt/161104_2IDR2.ckpt")
 
 def get_session():
     return sess
@@ -71,25 +72,29 @@ def get_pred_batch(input_mats):
     pred_cho, pred_jung, pred_jong, pred_en = sess.run(
         (h_cho, h_jung, h_jong, h_en),
         feed_dict={X: input_mats, is_training: False})
-    return [Prediction(pred_cho[i], pred_jung[i], pred_jong[i], pred_en[i]) for i in range(pred_cho.shape[0])]
+    return [Prediction(pred_cho[i], pred_jung[i], pred_jong[i], pred_en[i])
+            for i in range(pred_cho.shape[0])]
 
-# Reshape narrow letters to 32 X 32
-# without modifying ratio
 def reshape_with_margin(img, size=32, pad=4):
-	if img.shape[0] > img.shape[1] :
-		dim = img.shape[0]
-		margin = (dim - img.shape[1])//2
-		margin_img = np.zeros([dim, margin])
-		reshaped = np.c_[margin_img, img, margin_img]
-	else :
-		dim = img.shape[1]
-		margin = (dim - img.shape[0])//2
-		margin_img = np.zeros([margin, dim])
-		reshaped = np.r_[margin_img, img, margin_img]
-	reshaped = cv2.resize(reshaped, (size-pad*2, size-pad*2), interpolation = cv2.INTER_AREA)
-	padded = np.zeros([size, size])
-	padded[pad:-pad, pad:-pad] = reshaped
-	return padded
+    """Reshape narrow letters to 32 X 32
+    without modifying ratio"""
+    if img.shape[0] > img.shape[1]:
+        dim = img.shape[0]
+        margin = (dim - img.shape[1])//2
+        margin_img = np.zeros([dim, margin])
+        reshaped = np.c_[margin_img, img, margin_img]
+    else:
+        dim = img.shape[1]
+        margin = (dim - img.shape[0])//2
+        margin_img = np.zeros([margin, dim])
+        reshaped = np.r_[margin_img, img, margin_img]
+    reshaped = cv2.resize(reshaped, (size-pad*2, size-pad*2), interpolation = cv2.INTER_AREA)
+    if pad > 0:
+        padded = np.zeros([size, size])
+        padded[pad:-pad, pad:-pad] = reshaped
+    else:
+        padded = reshaped
+    return padded
 
 def set_img(l, allc, allimg, c):
     if c.type == CHARTYPE.BLANK:

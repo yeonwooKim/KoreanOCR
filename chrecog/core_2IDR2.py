@@ -42,7 +42,8 @@ Y_size = len(ko_chset_cho)+len(ko_chset_jung)+len(ko_chset_jong)+len(en_chset)+4
 
 tf.reset_default_graph()
 X = tf.placeholder(tf.float32, [None, 32, 32])
-keep_prob = tf.placeholder(tf.float32)
+is_training = tf.placeholder(tf.bool)
+keep_prob = tf.cond(is_training, lambda: tf.constant(0.5), lambda: tf.constant(1.0))
 
 # Small inception model
 # http://laonple.blog.me/220704822964

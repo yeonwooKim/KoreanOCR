@@ -121,7 +121,7 @@ def generate_fonts(save_path, datasize, plot, force=False):
         show_example_all("A", fonts, weights)
         plt.show()
     print("================")
-    if (force or input("Are you sure to proceed? (y/n)") == "y"):
+    if force or input("Are you sure to proceed? (y/n)") == "y":
         print("Proceeding..")
         gen.save_chset_random(fonts, weights, (en_chset, ko_chset), (10, 30, 1), save_path, datasize)
     else:

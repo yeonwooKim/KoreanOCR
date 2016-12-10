@@ -29,7 +29,6 @@ def get_txt(img):
 
     print_msg("recognizing..")
     sess = get_session()
-    load_ckpt(sess, "data/ckpt/161117_BN2.ckpt")
     graphs = get_pred(graphs)
 
     print_msg("semantic..")
@@ -38,7 +37,8 @@ def get_txt(img):
     print_msg("reconst..")
     return reconst.build_graphs(graphs)
 
-msg_help = """python examine.py <image_path>"""
+msg_help = """python examine.py <image_path>
+-l --letter letter mode"""
 
 def get_char(img):
     processed = preproc.process(img)
@@ -47,7 +47,6 @@ def get_char(img):
     graphs = [Paragraph(lines)]
 
     sess = get_session()
-    load_ckpt(sess, "data/ckpt/161117_BN2.ckpt")
     graphs = get_pred(graphs)
 
     graphs = semantic.analyze(graphs)
