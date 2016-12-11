@@ -134,6 +134,7 @@ def find_table(img):
     
     # horizontal lines
     horizontalsize = int(horiz_img.shape[0] / scale)
+    if horizontalsize == 0: return None
     horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT,(horizontalsize, 1))
     horiz_img = cv2.erode(horiz_img, horizontalStructure, iterations = 1)
     horiz_img = cv2.dilate(horiz_img, horizontalStructure, iterations = 1)

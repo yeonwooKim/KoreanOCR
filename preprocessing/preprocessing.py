@@ -24,6 +24,8 @@ import numpy
 import cv2
 from scipy.ndimage.filters import rank_filter
 
+from util import Paragraph
+
 import table
 
 '''
@@ -31,6 +33,7 @@ import table
 ' function: store table's information & image containing table
 ' member data: info(cell's lefttop, rightbottom cutting points), img
 ' method: getInfo, getImage
+'''
 '''
 class Table(object):
     def __init__(self, info, img):
@@ -46,12 +49,14 @@ class Table(object):
     def getImage(self):
         """Return the image list of this class table"""
         return self.image
+'''
 
 '''
 ' name: Paragraph
 ' function: store an image which does not contain any tables
 ' member data: img
 ' method: getImage
+'''
 '''
 class Paragraph(object):
     def __init__(self, img):
@@ -61,7 +66,7 @@ class Paragraph(object):
     def getImage(self):
         """Return the image of this class table"""
         return self.image
-
+'''
 '''
 name: denoising
 function: denoise the given image
@@ -112,14 +117,15 @@ def check_intersection(r1, r2):
 
 '''
 name: thresholding
-function: make a binary image by thrsholding
+function: make a binary image by thrsholding. If the image is too small, resize it
 algorithm: adaptive gaussian thresholding
 input: rawimg(image array - np.uint8)
 output: binary image
 '''
 def thresholding(rawimg):
     grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
-    binary_img = cv2.adaptiveThreshold(~grayimg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2);
+    scale, stretched = stretch_image(~grayimg)
+    binary_img = cv2.adaptiveThreshold(stretched, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2);
     #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
     #                      cv2.THRESH_BINARY_INV, 11, 2)
     #resultimg = cv2.cvtColor(binary_img,cv2.COLOR_GRAY2BGR)
@@ -209,13 +215,17 @@ def expand_image(edges, N, iterations):
 ' output: list of contours
 '''
 def find_connected_components(edges):
-    n = 1
-    count = 21
-    while count > 16:
-        n += 1
-        expanded_image = expand_image(edges, N=3, iterations=n)
-        _, contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        count = len(contours)
+
+    expanded_image = expand_image(edges, N=3, iterations=8)
+    _, contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #for i in range(5):
+    #n = 1
+    #count = 65
+    #while count > 64:
+        #n += 1
+        #expanded_image = expand_image(edges, N=3, iterations=n)
+        #_, contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        #count = len(contours)
     #Image.fromarray(edges).show()
     #Image.fromarray(255 * expanded_image).show()
     return contours
@@ -301,7 +311,12 @@ def find_table_area(image):
         #cv2.drawContours(mask, [c], 0, (0,0,0), 2)
         #table_img = cv2.bitwise_and(image,mask)
         table_img = image[r[1]-5:r[3]+5, r[0]-5:r[2]+5]
-        tables.append(table_img)    
+        valid = True
+        for axis in table_img.shape:
+            if axis < 1:
+                valid = False
+                break
+        if valid: tables.append(table_img)    
     
     return tables
 
@@ -320,12 +335,13 @@ def rotate_image(image):
     _,contours,_ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     points = []
     for h, cnt in enumerate(contours):
-                area = cv2.contourArea(cnt)
-                if area >= 10:
-                    for p in cnt:
-                        points.append(p[0])
-                        
-    points = numpy.array(points)              
+        area = cv2.contourArea(cnt)
+        if area >= 10:
+            for p in cnt:
+                points.append(p[0])
+    
+    if len(points) < 1: return image
+    points = numpy.array(points)
     rect = cv2.minAreaRect(points)
     """
     DEBUG
@@ -362,11 +378,26 @@ def open_image(path):
 ' output: shrinked image
 '''
 def shrink_image(image):
-    MAX_DIM = 2048
+    MAX_DIM = 1024
     if max(image.shape[0], image.shape[1]) <= MAX_DIM:
         return 1.0, image
     
     scale = 1.0 * MAX_DIM / max(image.shape[0], image.shape[1])
+    new_image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    return scale, new_image
+
+'''
+' name: stretch_image
+' function: stretch image(to improve threshold result)
+' input: image to strech
+' output: stretched image
+'''
+def stretch_image(image):
+    MIN_DIM = 128
+    if min(image.shape[0], image.shape[1]) >= MIN_DIM:
+        return 1.0, image
+    
+    scale = 1.0 * MIN_DIM / min(image.shape[0], image.shape[1])
     new_image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
     return scale, new_image
 
@@ -394,15 +425,17 @@ def preprocess_image(img, out_path=None, save=False):
     if len(borders):
         border_contour = contours[borders[0][0]]
         edges = remove_border(border_contour, edges)
-
+    
         
     edges = 255 * (edges > 0).astype(numpy.uint8)
+    
     
     # Remove ~1px borders using a rank filter.
     maxed_rows = rank_filter(edges, -4, size=(1, 20))
     maxed_cols = rank_filter(edges, -4, size=(20, 1))
     debordered = numpy.minimum(numpy.minimum(edges, maxed_rows), maxed_cols)
     edges = debordered
+    
 
     # print ('input file: %s' % (path))
     contours = find_connected_components(edges)
@@ -430,13 +463,14 @@ def preprocess_image(img, out_path=None, save=False):
         """
         
         denoised_img = denoising(text_img)
+        #denoised_img = text_img
         rot_img = rotate_image(denoised_img)
         
         tables = find_table_area(rot_img)
         # there is no table in the image
         if len(tables) == 0:
             binary_img = thresholding(rot_img)
-            parag = Paragraph(binary_img)
+            parag = Paragraph(img = binary_img, rect = rect)
             layouts.append(parag)
             if save:
                 outfname = '{}_{}_{}.png'.format(out_path, 'paragraph', i)
@@ -450,10 +484,16 @@ def preprocess_image(img, out_path=None, save=False):
                     outfname = '{}_{}_{}_{}.png'.format(out_path, 'table', i, j)
                     cv2.imwrite(outfname, binary_img)
                     print ('    -> %s' % (outfname))
-                tab = Table(binary_img, info)
-                layouts.append(tab)
+                if info is None:
+                    print("table info None")
+                    continue
+                else:
+                    for row_cells in info:
+                        for cell in row_cells:
+                            cell_rect = (cell[5], cell[6], cell[7], cell[8])
+                            parag = Paragraph(img=binary_img[cell_rect[0]:cell_rect[2], cell_rect[1]:cell_rect[3]], rect=cell_rect)
+                            layouts.append(parag)
                 #print(info)
-        
     #print(layouts)    
     return layouts
         

@@ -12,7 +12,7 @@ import reconst
 import semantic
 import chrecog
 from preprocessing import preprocess_image
-from detection.util import CHARTYPE, Char, Line, Paragraph
+from util import CHARTYPE, Char, Line, Paragraph
 
 pid = os.getpid()
 
@@ -36,21 +36,16 @@ def get_txt(img, is_simple=False):
     분석된 최종 문자열을 반환"""
     print_msg("preprocessing..")
     if is_simple:
-        processed_imgs = [simple_preproc(img)]
+        layouts = [
+            Paragraph(img=simple_preproc(img), rect=(0, 0, img.shape[0], img.shape[1]))
+            ]
     else:
         layouts = preprocess_image(img)
-        processed_imgs = []
-        for l in layouts:
-            if hasattr(l.image, "shape"):
-                #plt.figure(num=None, figsize=(3, 3), facecolor='w', edgecolor='k')
-                #plt.imshow(l.image, interpolation="none", cmap=plt.get_cmap("gray"))
-                #plt.show()
-                processed_imgs.append(l.image)
 
     print_msg("detecting..")
     graphs = []
-    for processed in processed_imgs:
-        graphs.extend(detection.get_graphs(processed))
+    for para in layouts:
+        graphs.extend(detection.get_graphs(para))
 
     print_msg("recognizing..")
     graphs = chrecog.predict.get_pred(graphs)
@@ -80,7 +75,7 @@ def pil_to_cv(image):
     if image is None: return None
     for orientation in ExifTags.TAGS.keys(): 
         if ExifTags.TAGS[orientation]=='Orientation' : break 
-    if hasattr(image, "_getexif"):
+    if hasattr(image, "_getexif") and image._getexif() is not None:
         exif = dict(image._getexif().items())
         if exif[orientation] == 3:
             image = image.rotate(180, expand=True)

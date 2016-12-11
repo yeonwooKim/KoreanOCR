@@ -1,6 +1,6 @@
 #import matplotlib.pyplot as plt
 #plt.rcParams['image.cmap'] = 'Greys'
-from detection.util import CHARTYPE
+from util import CHARTYPE
 from chrecog.predict import get_pred_batch, reshape_with_margin
 from hangul_utils import check_syllable, split_syllable_char
 import numpy as np

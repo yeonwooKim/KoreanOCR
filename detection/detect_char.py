@@ -1,3 +1,8 @@
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 import cv2
 import numpy as np
 from enum import Enum
@@ -7,15 +12,16 @@ import math
 from util import *
 
 # If executed directly
-def run_direct():
-	original_img = cv2.imread('test/line_testing/test_book2.png')
+def main():
+	original_img = cv2.imread('../preprocessing/book_sample_0_crop_0.png')
 	grayscale_img = cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY)
 	(_, im_bw) = cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)
 	(x, y) = im_bw.shape
 
-	essay = dl.output_line_imgs(im_bw)
+	para = Paragraph(img=im_bw)
+	essay = dl.output_line_imgs(para)
 	save_essay(essay)
-	get_graphs(im_bw)
+	get_graphs(para)
 
 # Guesses one letter size
 def guess_letter_size(wlist, height):
@@ -25,6 +31,7 @@ def guess_letter_size(wlist, height):
 	bucket = [0]*(h - l)
 
 	length = len(wlist)
+	if length == 0: return 0
 	err = 2
 	j = 0
 	for i in range (l, h):
@@ -186,27 +193,28 @@ def proc_paragraph(para):
 	snd_candidate3 = []
 	snd_candidate4 = []
 	wlist = []
-	for line in para:
-		(m, c) = fst_pass(line)
+	for line in para.lines:
+		(m, c) = fst_pass(line.img)
 		fst_candidate.append(c)
 		wlist.append(m)
-	l = len(para)
 	if len(wlist) == 0:
-		return []
+		return None
 	letter_size = statistics.median(wlist)
-	for i in range (0, l):
-		c1 = snd_pass(para[i], letter_size, fst_candidate[i], 0.6, 1.3, 0)
-		c1 = thd_pass(para[i], letter_size, c1)
+	if letter_size < 1:
+		return None
+	for i, line in enumerate(para.lines):
+		c1 = snd_pass(line.img, letter_size, fst_candidate[i], 0.6, 1.3, 0)
+		c1 = thd_pass(line.img, letter_size, c1)
 		snd_candidate1.append(c1)
-		c2 = snd_pass(para[i], letter_size, fst_candidate[i], 0.8, 1.1, 0)
-		c2 = thd_pass(para[i], letter_size, c2)
+		c2 = snd_pass(line.img, letter_size, fst_candidate[i], 0.8, 1.1, 0)
+		c2 = thd_pass(line.img, letter_size, c2)
 		snd_candidate2.append(c2)
-		c3 = snd_pass(para[i], letter_size, fst_candidate[i], 0.7, 0.9, 0)
-		c3 = thd_pass(para[i], letter_size, c3)
+		c3 = snd_pass(line.img, letter_size, fst_candidate[i], 0.7, 0.9, 0)
+		c3 = thd_pass(line.img, letter_size, c3)
 		snd_candidate3.append(c3)
 		# Generous merge threshold
-		c4 = snd_pass(para[i], letter_size, fst_candidate[i], None, None, 1)
-		c4 = thd_pass(para[i], letter_size, c4)
+		c4 = snd_pass(line.img, letter_size, fst_candidate[i], None, None, 1)
+		c4 = thd_pass(line.img, letter_size, c4)
 		snd_candidate4.append(c4)
 	return (snd_candidate1, snd_candidate2, snd_candidate3, snd_candidate4)
 
@@ -218,22 +226,22 @@ def trunc_n_save_letter(para_num, line_num, pass_num, line, candidate):
 	for word in candidate:
 		cnt_letter = 0
 		for letter in word:
-			cv2.imwrite('test/char_testing/t' + str(pass_num) + '/p' + str(para_num) + 'l' + str(line_num) +
-					'w' + str(cnt_word) + 'l' + str(cnt_letter) + '.png', line[0:x,letter[0]:letter[1]])
+			filepath = ('test/char_testing/t' + str(pass_num) + '/p' + str(para_num) + 'l' + str(line_num) +
+					'w' + str(cnt_word) + 'l' + str(cnt_letter) + '.png')
+			success = cv2.imwrite(filepath, line[0:x,letter[0]:letter[1]])
+			if not success: print("save %s failed: check if folder exists" % filepath)
 			cnt_letter = cnt_letter + 1
 		cnt_word = cnt_word + 1
 
 # Implemented for testing; Given an essay, processes 2 times and saves letters as images
 def save_essay(essay):
-	l = len(essay)
-	for i in range (0, l):
-		(c1, c2, c3, c4) = proc_paragraph(essay[i])
-		l2 = len(essay[i])
-		for j in range (0, l2):
-			trunc_n_save_letter(i, j, 1, essay[i][j], c1[j])
-			trunc_n_save_letter(i, j, 2, essay[i][j], c2[j])
-			trunc_n_save_letter(i, j, 3, essay[i][j], c3[j])
-			trunc_n_save_letter(i, j, 4, essay[i][j], c4[j])
+	for i, graph in enumerate(essay):
+		(c1, c2, c3, c4) = proc_paragraph(graph)
+		for j, line in enumerate(graph.lines):
+			trunc_n_save_letter(i, j, 1, line.img, c1[j])
+			trunc_n_save_letter(i, j, 2, line.img, c2[j])
+			trunc_n_save_letter(i, j, 3, line.img, c3[j])
+			trunc_n_save_letter(i, j, 4, line.img, c4[j])
 
 # Given four lists (candidate lists of different threshold),
 # finds the indices for each list with the same end points
@@ -320,36 +328,29 @@ def argmin(items):
 	return min_idxs, min_elm
 
 # Truncates line image to letters and constructs line classes
-def to_line(line, candidates):
-	l = []
+def update_line(line, candidates):
 	(c1, c2, c3, c4) = candidates
-	length = len(c1)
-	for i in range (0, length):
+	for i in range(len(c1)):
 		char_list = compare_pass((c1[i], c2[i], c3[i], c4[i]))
-		l = l + char_list
-		if i != length - 1:
-			l.append(Char(None, CHARTYPE.BLANK))
-	return Line(line, l)
+		line.chars.extend(char_list)
+		if i != len(c1): # If not last word
+			line.chars.append(Char(None, CHARTYPE.BLANK))
 
 # Given a paragraph image, constructs a paragraph class
-def to_paragraph(para):
-	l = []
-	(c1, c2, c3, c4) = proc_paragraph(para)
-	length = len(para)
-	for i in range (0, length):
-		line = to_line(para[i], (c1[i], c2[i], c3[i], c4[i]))	
-		l.append(line)
-	return Paragraph(l)
+def update_paragraph(para):
+	proc = proc_paragraph(para)
+	if proc is None: return
+	(c1, c2, c3, c4) = proc
+	for i, line in enumerate(para.lines):
+		update_line(line, (c1[i], c2[i], c3[i], c4[i]))	
 
 # reconst 모듈로 넘겨줄 paragraph list를 생성
-def get_graphs(img):
-	essay = dl.output_line_imgs(img)
-	l = []
-	length = len(essay)
-	for i in range (0, length):
-		para = to_paragraph(essay[i])
-		l.append(para)
-	return l
+# paragraph 하나를 input으로 받아 여러 paragraph로 분리
+def get_graphs(paragraph):
+	line_graphs = dl.output_line_imgs(paragraph)
+	for graph in line_graphs:
+		update_paragraph(graph)
+	return line_graphs
 
 if __name__ == "__main__":
-	run_direct()
+	main()

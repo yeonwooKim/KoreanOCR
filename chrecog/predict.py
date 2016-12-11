@@ -3,7 +3,7 @@ import cv2
 import tensorflow as tf
 from hangul_utils import join_jamos_char
 from data import en_chset, ko_chset_cho, ko_chset_jung, ko_chset_jong
-from detection.util import CHARTYPE
+from util import CHARTYPE
 from data.buffer import *
 #from chrecog.core_2IDR2 import *
 from chrecog.core_BN2 import *

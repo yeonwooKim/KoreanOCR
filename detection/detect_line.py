@@ -1,4 +1,8 @@
 from __future__ import division
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 import cv2
 import numpy as np
 import statistics
@@ -53,50 +57,56 @@ def label_paragraph(trunc_row, height):
 	label.append(num)
 	return (num + 1, label)
 
-# Truncates the imgs to line imgs
-# Returns list of img objects
-def get_line_imgs(img, trunc_row):
-	line_imgs = []
+# Truncates the paragraph to lines
+# Returns list of Line objects
+def get_lines(paragraph, trunc_row):
+	"""Instead of array of images, return array of Line objects
+	to maintain coordinates of each line in the original image"""
+	img = paragraph.img
+	lines = []
 	l = len(trunc_row)
+	if l < 1: return []
 	height = []
 	for i in range (0, l):
 		height.append(trunc_row[i][1] - trunc_row[i][0]);
-	
+
 	med_height = statistics.median(height)
 	for i in range (0, l):
 		im = trim_line(img[trunc_row[i][0]:trunc_row[i][1]])
+		line_rect = get_rect(img.shape, paragraph.rect, (0, trunc_row[i][0], img.shape[1], trunc_row[i][1]))
 		# Add padding to english lines
 		bordersize = med_height - height[i]
 		if bordersize > 0:
 			im = cv2.copyMakeBorder(im, top=int(bordersize), bottom=0, left=0, right=0, borderType= cv2.BORDER_CONSTANT, value=[0,0,0] )
-		line_imgs.append(im)
-	return line_imgs
+		lines.append(Line(img=im, rect=line_rect))
+	return lines
 
 # Implemented for testing; saves line images by paragraph and line number
-def save_line_imgs(img, trunc_row):
+def save_line_imgs(paragraph, trunc_row):
 	length = len(trunc_row)
 	label = label_location(trunc_row)
-	imgs = get_line_imgs(img, trunc_row)
+	lines = get_lines(paragraph, trunc_row)
 	for i in range (0, length):
 		name = "test/paragraph" + str(label[i][0]) + "line" + str(label[i][1]) + ".png"
-		cv2.imwrite(name, imgs[i])
+		cv2.imwrite(name, lines[i].img)
 
 # Outputs line imgs in the form of following:
-# [paragraph_1, paragraph_2, ...]
+# Divide one paragraph into many
 # paragraph_n = [line_1, line_2, ...]
 # line_n = line img
-def output_line_imgs(img):
-	essay = []
+def output_line_imgs(paragraph):
+	sorted = []
+	img = paragraph.img
 	trunc_row = find_line(img)
 	length = len(trunc_row)
 	(_, height) = img.shape
 	(num_p, label) = label_paragraph(trunc_row, height)
 	for i in range (0, num_p):
-		essay.append([])
-	imgs = get_line_imgs(img, trunc_row)
+		sorted.append(Paragraph())
+	lines = get_lines(paragraph, trunc_row)
 	for i in range (0, length):
-		essay[label[i]].append(imgs[i])
-	return essay
+		sorted[label[i]].lines.append(lines[i])
+	return sorted
 
 # implemented for testing; returns list of paragraph and line #
 def label_location(trunc_row, height):
@@ -117,10 +127,10 @@ def save_line_imgs(img):
 	length = len(trunc_row)
 	(_, height) = img.shape
 	label = label_location(trunc_row, height)
-	imgs = get_line_imgs(img, trunc_row)
+	lines = get_lines(Paragraph(img), trunc_row)
 	for i in range (0, length):
 		name = "test/paragraph" + str(label[i][0]) + "line" + str(label[i][1]) + ".png"
-		cv2.imwrite(name, imgs[i])
+		cv2.imwrite(name, lines[i].img)
 
 # If executed directly
 if __name__ == '__main__':
