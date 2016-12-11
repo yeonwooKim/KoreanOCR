@@ -256,7 +256,7 @@ def find_optimal_bounding_boxes(contours, edges):
         
         optimal_boxes.append(rect)
 
-    optimal_boxes.sort(key=lambda x: (x[0], x[1]))
+    optimal_boxes.sort(key=lambda x: (x[1], x[0]))
     
     return optimal_boxes
 
@@ -321,24 +321,27 @@ def rotate_image(image):
     points = []
     for h, cnt in enumerate(contours):
                 area = cv2.contourArea(cnt)
-                if area >= 10:
+                if area >= 90:
                     for p in cnt:
                         points.append(p[0])
                         
-    points = numpy.array(points)              
-    rect = cv2.minAreaRect(points)
-    """
-    DEBUG
-    box = cv2.boxPoints(rect)
-    box = numpy.int0(box)
-    mask = numpy.zeros((image.shape),numpy.uint8)
-    cv2.drawContours(mask,[box],0,(0,0,255),2)
-    cv2.imwrite('{}_{}.png'.format('rotbox',rect[2]), mask)
-    """
-    angle = abs(rect[2])
-    if angle > 45: angle = angle - 90 
-    mat = cv2.getRotationMatrix2D(rect[0], -angle, 1)
-    image = cv2.warpAffine(image, mat, (image.shape[1], image.shape[0]), image.size, cv2.INTER_CUBIC, cv2.BORDER_CONSTANT, (255,255,255))
+    points = numpy.array(points)
+    #print ("points.length()=", points.size)
+    if points.size > 10 :
+        rect = cv2.minAreaRect(points)
+        """
+        DEBUG
+        box = cv2.boxPoints(rect)
+        box = numpy.int0(box)
+        mask = numpy.zeros((image.shape),numpy.uint8)
+        cv2.drawContours(mask,[box],0,(0,0,255),2)
+        cv2.imwrite('{}_{}.png'.format('rotbox',rect[2]), mask)
+        """
+        angle = abs(rect[2])
+        print(angle)
+        if angle > 45: angle = angle - 90 
+        mat = cv2.getRotationMatrix2D(rect[0], -angle, 1)
+        image = cv2.warpAffine(image, mat, (image.shape[1], image.shape[0]), image.size, cv2.INTER_CUBIC, cv2.BORDER_CONSTANT, (255,255,255))
     
     return image
 
