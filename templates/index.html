@@ -45,6 +45,13 @@
                 width:100%;
             }
 
+            #upload-progress {
+                margin-top : 20px;  
+                height : 10px;
+                width: 0%;
+                background: #555;
+            }
+
             .slide .btn {
                 display:block;
                 max-width:200px;
@@ -56,11 +63,11 @@
                 width:100%;
             }
 
-            #upload-stat {
+            #download-stat {
                 margin-top:50px;
             }
 
-            #upload-loader {
+            #download-loader {
                 margin-top:-10px;
             }
 
@@ -158,10 +165,11 @@
             <div class="slide active" id="slide-upload">
                 <h1>Korean OCR</h1>
                 <button id="upload-btn" class="btn btn-default" type="button">Choose Image...</button>
+                <div id="upload-progress"> </div>
             </div>
             <div class="slide" id="slide-load">
-                <h1 id="upload-stat"></h1>
-                <div class="loader" id="upload-loader" hidden>Loading...</div>
+                <h1 id="download-stat"></h1>
+                <div class="loader" id="download-loader" hidden>Loading...</div>
             </div>
             <div class="slide" id="slide-result">
                 <h2>Result</h2>
@@ -197,6 +205,7 @@
                     this.fn_submit = args.fn_submit;
                     this.fn_success = args.fn_success;
                     this.fn_error = args.fn_error;
+                    this.fn_progress = args.fn_progress;
                     if (!this.fn_submit) this.fn_submit = function(formData, jqForm, options) {
                             formData.push(this.param);
                             console.log(this.param);
@@ -213,7 +222,8 @@
                     this.$form.ajaxForm({
                         beforeSubmit : this.fn_submit,
                         success: this.fn_success,
-                        error: this.fn_error
+                        error: this.fn_error,
+                        uploadProgress: this.fn_progress
                     });
                     this.$btn.click(function() {
                         this.$file_input.trigger('click');
@@ -231,8 +241,14 @@
                 this.init(args);
             };
 
-            var $uploadstat = $("#upload-stat");
-            var $uploadLoader = $("#upload-loader");
+            var $uploadBtn = $("#upload-btn");
+            var $uploadstat = $("#download-stat");
+            var $uploadLoader = $("#download-loader");
+            var $slideUpload = $("#slide-upload");
+            var $slideLoad = $("#slide-load");
+            var $slideResult = $("#slide-result");
+
+            var $uploadProgress = $('#upload-progress');
             var imageInput = new HiddenFileInput({
                 action : "/upload",
                 accept : "image/*",
@@ -240,22 +256,29 @@
                 file_input_name : "image",
                 $btn : $("#upload-btn"),
                 fn_submit : function (formData, jqForm, options) {
-                    $("#slide-upload").removeClass('active');
-                    $("#slide-load").addClass('active');
-                    $("#slide-result").removeClass('active');
-                    $uploadstat.text("Analyzing...");
-                    $uploadLoader.show();
+                    
                 },
                 fn_success : function (response, status) {
                     $uploadstat.text("Success");
                     $uploadLoader.hide();
-                    $("#slide-upload").removeClass('active');
-                    $("#slide-load").removeClass('active');
-                    $("#slide-result").addClass('active');
+                    $slideUpload.removeClass('active');
+                    $slideLoad.removeClass('active');
+                    $slideResult.addClass('active');
                     $("#result-text").text(response);
                 },
                 fn_error : function () {
-                    $uploadstat.text("Error. Try again");
+                    $uploadstat.text("Error. Try again later.");
+                    $uploadLoader.hide();
+                },
+                fn_progress : function (event, pos, total, percent) {
+                    if (percent > 99 && $slideUpload.hasClass('active')) {
+                        $slideUpload.removeClass('active');
+                        $slideLoad.addClass('active');
+                        $slideResult.removeClass('active');
+                        $uploadstat.text("Analyzing...");
+                        $uploadLoader.show();
+                    }
+                    $uploadProgress.width(percent+"%");
                 }
             });
         </script>
