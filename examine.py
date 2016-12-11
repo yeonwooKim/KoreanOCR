@@ -31,10 +31,10 @@ def simple_preproc(img, threshold=True):
 
     return cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
-def get_txt(img, is_simple=False):
+def get_txt(imgname, img, verbose=False, is_json=False, is_simple=False):
     """이미지를 각 모듈에 순서대로 넘겨줌.
     분석된 최종 문자열을 반환"""
-    print_msg("preprocessing..")
+    if verbose: print_msg("preprocessing..")
     if is_simple:
         layouts = [
             Paragraph(img=simple_preproc(img), rect=(0, 0, img.shape[0], img.shape[1]))
@@ -42,19 +42,21 @@ def get_txt(img, is_simple=False):
     else:
         layouts = preprocess_image(img)
 
-    print_msg("detecting..")
+    if verbose: print_msg("detecting..")
     graphs = []
     for para in layouts:
         graphs.extend(detection.get_graphs(para))
 
-    print_msg("recognizing..")
+    if verbose: print_msg("recognizing..")
     graphs = chrecog.predict.get_pred(graphs)
 
-    print_msg("semantic..")
+    if verbose: print_msg("semantic..")
     graphs = semantic.analyze(graphs)
 
-    print_msg("reconst..")
-    return reconst.build_graphs(graphs)
+    if verbose: print_msg("reconst..")
+    
+    if is_json: return reconst.build_json(imgname, graphs)
+    else: return reconst.build_graphs(graphs)
 
 msg_help = """python examine.py <image_path>
 -l --letter letter mode
@@ -93,8 +95,10 @@ def main(argv):
     letter = False
     is_simple = False
     invert = False
+    verbose = False
+    is_json = False
     try:
-        opts, args = getopt.gnu_getopt(argv, "hli", ["help", "letter", "invert", "sp"])
+        opts, args = getopt.gnu_getopt(argv, "hlivj", ["help", "letter", "invert", "sp", "verbose", "json"])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
@@ -106,6 +110,10 @@ def main(argv):
             letter = True
         elif opt in ("-i", "--invert"):
             invert = True
+        elif opt in ("-v", "--verbose"):
+            verbose = True
+        elif opt in ("-j", "--json"):
+            is_json = True
         elif opt in ("--sp"):
             is_simple = True
 
@@ -113,8 +121,10 @@ def main(argv):
         print(msg_help)
         sys.exit(2)
 
-    img = pil_to_cv(Image.open(args[0]))
-    if img is None:
+    try:
+        img = pil_to_cv(Image.open(args[0]))
+        imgname = os.path.basename(args[0])
+    except:
         print("Invalid image file")
         exit(1)
 
@@ -122,7 +132,7 @@ def main(argv):
         img = 255-img
 
     if not letter:
-        print(get_txt(img, is_simple))
+        print(get_txt(imgname, img, verbose, is_json, is_simple))
     else:
         print(get_char(img))
 

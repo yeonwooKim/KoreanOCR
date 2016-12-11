@@ -493,8 +493,8 @@ def preprocess_image(img, out_path=None, save=False):
         #denoised_img = text_img
         rot_img = rotate_image(denoised_img)
         
-        #tables = find_table_area(rot_img)
-        tables = []
+        tables = find_table_area(rot_img)
+        #tables = []
         # there is no table in the image
         if len(tables) == 0:
             binary_img = thresholding(rot_img)

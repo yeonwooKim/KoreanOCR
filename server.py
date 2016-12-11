@@ -39,7 +39,7 @@ def listen():
                     if remain <= 0: break
                 byte_f = io.BytesIO(byte_arr)
                 img = examine.pil_to_cv(Image.open(byte_f))
-                analyzed = examine.get_txt(img)
+                analyzed = examine.get_txt(img, verbose=True)
                 conn.send(bytearray(analyzed, encoding='utf-8'))
             except IOError as e:
                 print(e)
