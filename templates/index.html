@@ -256,7 +256,8 @@
                 file_input_name : "image",
                 $btn : $("#upload-btn"),
                 fn_submit : function (formData, jqForm, options) {
-                    
+                    $uploadBtn.prop("disabled",true);
+                    $uploadBtn.text("Uploading...");
                 },
                 fn_success : function (response, status) {
                     $uploadstat.text("Success");
