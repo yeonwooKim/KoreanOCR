@@ -116,6 +116,27 @@ def check_intersection(r1, r2):
     return (r[2]>r[0]) and (r[3]>r[1])
 
 '''
+name: lsm
+function: least square method to calculate linear background
+algorithm: least square method
+input: grayimg(image array - np.uint8)
+output: regressed image
+'''
+def lsm(grayimg):
+    x = numpy.arange(grayimg.shape[1])
+    y = numpy.arange(grayimg.shape[0])
+    xv, yv = numpy.meshgrid(x, y)
+    constant = numpy.ones(xv.shape)
+    flatgrid = numpy.stack((xv.flat, yv.flat, constant.flat), axis=1)
+    Ap = numpy.linalg.pinv(flatgrid)
+    params = numpy.dot(Ap, grayimg.flat)
+
+    param_without_const = np.array([params[0], params[1], 0])
+
+    lsm_mat = numpy.dot(flatgrid, param_without_const).reshape(grayimg.shape)
+    return lsm_mat
+
+'''
 name: thresholding
 function: make a binary image by thrsholding. If the image is too small, resize it
 algorithm: adaptive gaussian thresholding
@@ -124,8 +145,11 @@ output: binary image
 '''
 def thresholding(rawimg):
     grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
-    scale, stretched = stretch_image(~grayimg)
-    binary_img = cv2.adaptiveThreshold(stretched, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2);
+    stretched = grayimg
+    subtracted = np.clip(stretched - lsm(stretched), 0, 255).astype(np.uint8)
+    blur = cv2.GaussianBlur(subtracted,(5,5),0)
+    ths, binary_img = cv2.threshold(blur,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+    #binary_img = cv2.adaptiveThreshold(stretched, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 65, -2);
     #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
     #                      cv2.THRESH_BINARY_INV, 11, 2)
     #resultimg = cv2.cvtColor(binary_img,cv2.COLOR_GRAY2BGR)
@@ -216,7 +240,7 @@ def expand_image(edges, N, iterations):
 '''
 def find_connected_components(edges):
 
-    expanded_image = expand_image(edges, N=3, iterations=8)
+    expanded_image = expand_image(edges, N=3, iterations=15)
     _, contours, _ = cv2.findContours(expanded_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     #for i in range(5):
     #n = 1
@@ -466,7 +490,8 @@ def preprocess_image(img, out_path=None, save=False):
         #denoised_img = text_img
         rot_img = rotate_image(denoised_img)
         
-        tables = find_table_area(rot_img)
+        #tables = find_table_area(rot_img)
+        tables = []
         # there is no table in the image
         if len(tables) == 0:
             binary_img = thresholding(rot_img)

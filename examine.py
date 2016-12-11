@@ -83,7 +83,11 @@ def pil_to_cv(image):
             image = image.rotate(270, expand=True)
         elif exif[orientation] == 8:
             image = image.rotate(90, expand=True)
-    return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    imgarr = np.array(image)
+    if len(imgarr.shape) > 2:
+        return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+    else:
+        return cv2.cvtColor(np.array(image), cv2.COLOR_GRAY2BGR)
 
 def main(argv):
     letter = False
