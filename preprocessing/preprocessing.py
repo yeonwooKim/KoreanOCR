@@ -20,11 +20,13 @@
 import os
 import sys
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import numpy
 import cv2
 from scipy.ndimage.filters import rank_filter
 
-from util import Paragraph
+from util import *
 
 import table
 
@@ -131,7 +133,7 @@ def lsm(grayimg):
     Ap = numpy.linalg.pinv(flatgrid)
     params = numpy.dot(Ap, grayimg.flat)
 
-    param_without_const = np.array([params[0], params[1], 0])
+    param_without_const = numpy.array([params[0], params[1], 0])
 
     lsm_mat = numpy.dot(flatgrid, param_without_const).reshape(grayimg.shape)
     return lsm_mat
@@ -146,9 +148,10 @@ output: binary image
 def thresholding(rawimg):
     grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
     stretched = grayimg
-    subtracted = np.clip(stretched - lsm(stretched), 0, 255).astype(np.uint8)
-    blur = cv2.GaussianBlur(subtracted,(5,5),0)
-    ths, binary_img = cv2.threshold(blur,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+    subtracted = numpy.clip(stretched - lsm(stretched), 0, 255).astype(numpy.uint8)
+    blur = cv2.GaussianBlur(subtracted,(1,1),0)
+    ths, binary_img = cv2.threshold(~blur,0,255,cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
+    binary_img = numpy.clip(binary_img.astype(numpy.float) * 512 / numpy.amax(binary_img), 0, 255).astype(numpy.uint8)
     #binary_img = cv2.adaptiveThreshold(stretched, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 65, -2);
     #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
     #                      cv2.THRESH_BINARY_INV, 11, 2)
@@ -417,7 +420,7 @@ def shrink_image(image):
 ' output: stretched image
 '''
 def stretch_image(image):
-    MIN_DIM = 128
+    MIN_DIM = 256
     if min(image.shape[0], image.shape[1]) >= MIN_DIM:
         return 1.0, image
     
