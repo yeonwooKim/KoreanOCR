@@ -73,7 +73,7 @@ def get_cells(horiz_lines, vert_lines):
                     
                 cell =[0, L1_y1+1, 0, L2_y1-1]
                 for V_x1, V_y1, V_x2, V_y2 in vert_lines:
-                    if (V_y1 <= L1_y1+1 and V_y2 >= L2_y1-1 and V_x1 >= s_x and V_x1 <= l_x) :
+                    if (V_y1 <= L1_y1+5 and V_y2 >= L2_y1-5 and V_x1 >= s_x-5 and V_x1 <= l_x+5) :
                         if cell[0] == 0:
                             cell[0] = V_x1 + 1
                         elif not check_in_range(old_begin, old_end, cell[0]+2):
@@ -110,9 +110,10 @@ def find_table(img):
         #cv2.rectangle(mask,(x,y),(x+w,y+h),(0,255,0), 1)
     
     horiz_lines = np.array(horiz_lines).tolist()
+    horiz_lines.sort(key=lambda x: x[2]-x[0], reverse=True)
     horiz_lines.sort(key=lambda x: x[1])
     horiz_lines = remove_dup_horiz(horiz_lines)
-    print(horiz_lines)
+    #print("horiz", horiz_lines)
     
     #DEBUG
     """
@@ -136,18 +137,19 @@ def find_table(img):
         vert_lines.append([x,y,x,y+h])
         
     vert_lines = np.array(vert_lines).tolist()
-    vert_lines.sort()
+    vert_lines.sort(key=lambda x: x[3]-x[1], reverse=True)
+    vert_lines.sort(key=lambda x: x[0])
     vert_lines = remove_dup_vert(vert_lines)
-
+    #print("vert", vert_lines)
     
     #DEBUG
     """
     for x1, y1, x2, y2 in vert_lines:
         cv2.line(mask, (x1,y1), (x2,y2), (0,0,255), 1)
-    
     """
-    cells = get_cells(horiz_lines, vert_lines)
     
+    cells = get_cells(horiz_lines, vert_lines)
+    print ("cells", cells)
     
     #DEBUG
     
@@ -234,3 +236,4 @@ if __name__ == '__main__':
         cv2.rectangle(mask, (x1,y1), (x2,y2), (255,255,0), 1)
     
     cv2.imwrite("table2_res.png", mask)
+    
