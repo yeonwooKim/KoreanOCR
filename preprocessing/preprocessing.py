@@ -336,7 +336,10 @@ def find_table_area(image):
         #cv2.drawContours(mask, [c], 0, (255,255,255), -1)
         #cv2.drawContours(mask, [c], 0, (0,0,0), 2)
         #table_img = cv2.bitwise_and(image,mask)
-        table_rect = (r[0]-5, r[1]-5, r[2]+5, r[3]+5)
+        table_rect = (max(0, r[0]-5), max(0, r[1]-5),
+                min(image.shape[1], r[2]+5), min(image.shape[0], r[3]+5))
+        if table_rect[2] - table_rect[0] < 2 or table_rect[3] - table_rect[1] < 2:
+            continue
         tables.append(table_rect)    
     
     return tables
@@ -513,9 +516,7 @@ def preprocess_image(img, out_path=None, save=False):
                     for row_cells in info:
                         for cell in row_cells:
                             if cell[2] == 1: continue # Merged cell
-                            cell_rect = [tr + cr for (tr,cr) in zip(trect, cell[5:9])] # Make absolute coordinate
-                            print(trect, end=" + ")
-                            print(cell[5:9], end=" = ")
+                            cell_rect = (trect[0]+cell[5], trect[1]+cell[6], cell[7], cell[8])
                             print(cell_rect)
                             if cell_rect[2] - cell_rect[0] < 2 or cell_rect[3] - cell_rect[1] < 2:
                                 continue

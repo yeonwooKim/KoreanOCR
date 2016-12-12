@@ -10,7 +10,7 @@ def remove_dup_horiz(lines):
         else :
             x3, y3, x4, y4 = res[len(res)-1]
             if (x1!=x3 or y1!=y3 or x2!=x4 or y2!=y4):
-                if (abs(y1-y3) <= 1) and (x1 >= x3) and (x2 <= x4):
+                if (abs(y1-y3) <= 3) and (x1 >= x3) and (x2 <= x4):
                     continue
                 res.append(lines[index])
                 
@@ -24,7 +24,7 @@ def remove_dup_vert(lines):
         else :
             x3, y3, x4, y4 = res[len(res)-1]
             if (x1!=x3 or y1!=y3 or x2!=x4 or y2!=y4):
-                if (abs(x1-x3) <= 1) and (y1 >= y3) and (y2 <= y4):
+                if (abs(x1-x3) <= 3) and (y1 >= y3) and (y2 <= y4):
                     continue
                 res.append(lines[index])
                 
