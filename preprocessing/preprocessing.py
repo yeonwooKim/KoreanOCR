@@ -151,7 +151,7 @@ def thresholding(rawimg):
     subtracted = numpy.clip(grayimg - lsm(grayimg), 0, 255).astype(numpy.uint8)
     blur = cv2.GaussianBlur(subtracted,(1,1),0)
     ths, binary_img = cv2.threshold(~blur,0,255,cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
-    binary_img = numpy.clip(binary_img.astype(numpy.float) * 512 / numpy.amax(binary_img), 0, 255).astype(numpy.uint8)
+    binary_img = numpy.clip(binary_img.astype(numpy.float) * 350 / numpy.amax(binary_img), 0, 255).astype(numpy.uint8)
     #binary_img = cv2.adaptiveThreshold(stretched, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 65, -2);
     #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
     #                      cv2.THRESH_BINARY_INV, 11, 2)
@@ -516,8 +516,7 @@ def preprocess_image(img, out_path=None, save=False):
                     for row_cells in info:
                         for cell in row_cells:
                             if cell[2] == 1: continue # Merged cell
-                            cell_rect = (trect[0]+cell[5], trect[1]+cell[6], cell[7], cell[8])
-                            print(cell_rect)
+                            cell_rect = (trect[0]+cell[5], trect[1]+cell[6], trect[0]+cell[7], trect[1]+cell[8])
                             if cell_rect[2] - cell_rect[0] < 2 or cell_rect[3] - cell_rect[1] < 2:
                                 continue
                             binary_img = thresholding(rot_img[cell_rect[1]:cell_rect[3], cell_rect[0]:cell_rect[2]])

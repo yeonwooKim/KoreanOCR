@@ -153,8 +153,9 @@ def find_table(img):
     horiz_lines.sort(key=lambda x: x[1])
     horiz_lines = remove_dup_horiz(horiz_lines)
     
+    
+    #DEBUG
     """
-    DEBUG
     for x1, y1, x2, y2 in horiz_lines:
         cv2.line(mask, (x1,y1), (x2,y2), (0,255,0), 1)
     """
@@ -178,8 +179,9 @@ def find_table(img):
     vert_lines.sort()
     vert_lines = remove_dup_vert(vert_lines)
 
+    
+    #DEBUG
     """
-    DEBUG
     for x1, y1, x2, y2 in vert_lines:
         cv2.line(mask, (x1,y1), (x2,y2), (0,0,255), 1)
     """
@@ -190,11 +192,9 @@ def find_table(img):
     DEBUG
     for x1, y1, x2, y2 in cells:
         cv2.rectangle(mask, (x1,y1), (x2,y2), (255,255,0), 1)
-    
-    cv2.imwrite("table2_res.png", mask)
     """
+    #cv2.imwrite("table2_res.png" % number, mask)
     return cells
-
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:

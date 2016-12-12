@@ -184,8 +184,13 @@ def analyze(graphs):
             #print_recur(i_l, 0, l.chars, True)
             merge_children(l.chars)
             analyze_sibiling(l.chars)
+            sum_rot = sum(c.rotten_point for c in l.chars)
+            sum_lenval = sum(len(c.value) for c in l.chars)
+            linerot = sum_rot / sum_lenval
+            if linerot > 40: l.chars = []
             #for c in l.chars:
             #    print("(%2d, %4d, %4d, %4d) %s" % (i_l, c.pt[0], c.pt[1], c.rotten_point, c.value))
+            #print("sum_rot/sum_lenval = %f" % linerot)
             i_l += 1
     #plt.show()
     return graphs
