@@ -147,8 +147,8 @@ output: binary image
 '''
 def thresholding(rawimg):
     grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
-    stretched = grayimg
-    subtracted = numpy.clip(stretched - lsm(stretched), 0, 255).astype(numpy.uint8)
+    #stretched = grayimg
+    subtracted = numpy.clip(grayimg - lsm(grayimg), 0, 255).astype(numpy.uint8)
     blur = cv2.GaussianBlur(subtracted,(1,1),0)
     ths, binary_img = cv2.threshold(~blur,0,255,cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
     binary_img = numpy.clip(binary_img.astype(numpy.float) * 512 / numpy.amax(binary_img), 0, 255).astype(numpy.uint8)
@@ -314,7 +314,6 @@ def find_table_area(image):
         rect = (x, y, x+w, y+h)
         rects.append(rect)
     
-    
     #rects.sort(key = lambda x: (x[1], x[0]))
     rects.sort(key = lambda x: (x[2]-x[0])*(x[3]-x[1]), reverse=True)
     
@@ -337,13 +336,8 @@ def find_table_area(image):
         #cv2.drawContours(mask, [c], 0, (255,255,255), -1)
         #cv2.drawContours(mask, [c], 0, (0,0,0), 2)
         #table_img = cv2.bitwise_and(image,mask)
-        table_img = image[r[1]-5:r[3]+5, r[0]-5:r[2]+5]
-        valid = True
-        for axis in table_img.shape:
-            if axis < 1:
-                valid = False
-                break
-        if valid: tables.append(table_img)    
+        table_rect = (r[0]-5, r[1]-5, r[2]+5, r[3]+5)
+        tables.append(table_rect)    
     
     return tables
 
@@ -363,7 +357,7 @@ def rotate_image(image):
     points = []
     for h, cnt in enumerate(contours):
         area = cv2.contourArea(cnt)
-        if area >= 10:
+        if area >= 50:
             for p in cnt:
                 points.append(p[0])
     
@@ -505,9 +499,9 @@ def preprocess_image(img, out_path=None, save=False):
                 cv2.imwrite(outfname, binary_img)
                 print ('    -> %s' % (outfname))
         else:    
-            for j, t in enumerate(tables):
+            for j, trect in enumerate(tables):
+                t = rot_img[trect[1]:trect[3], trect[0]:trect[2]]
                 info = table.find_table(t)
-                binary_img = thresholding(t)
                 if save:
                     outfname = '{}_{}_{}_{}.png'.format(out_path, 'table', i, j)
                     cv2.imwrite(outfname, binary_img)
@@ -518,8 +512,15 @@ def preprocess_image(img, out_path=None, save=False):
                 else:
                     for row_cells in info:
                         for cell in row_cells:
-                            cell_rect = (cell[5], cell[6], cell[7], cell[8])
-                            parag = Paragraph(img=binary_img[cell_rect[0]:cell_rect[2], cell_rect[1]:cell_rect[3]], rect=cell_rect)
+                            if cell[2] == 1: continue # Merged cell
+                            cell_rect = [tr + cr for (tr,cr) in zip(trect, cell[5:9])] # Make absolute coordinate
+                            print(trect, end=" + ")
+                            print(cell[5:9], end=" = ")
+                            print(cell_rect)
+                            if cell_rect[2] - cell_rect[0] < 2 or cell_rect[3] - cell_rect[1] < 2:
+                                continue
+                            binary_img = thresholding(rot_img[cell_rect[1]:cell_rect[3], cell_rect[0]:cell_rect[2]])
+                            parag = Paragraph(img = binary_img, rect = cell_rect)
                             layouts.append(parag)
                 #print(info)
     #print(layouts)    
