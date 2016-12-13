@@ -10,10 +10,10 @@ def remove_dup_horiz(lines):
         else :
             x3, y3, x4, y4 = res[len(res)-1]
             if (x1!=x3 or y1!=y3 or x2!=x4 or y2!=y4):
-                if (abs(y1-y3) <= 1) and (x1 >= x3) and (x2 <= x4):
+                if (abs(y1-y3) <= 3) and (x1 >= x3) and (x2 <= x4):
                     continue
                 res.append(lines[index])
-                
+                        
     return res
         
 def remove_dup_vert(lines):
@@ -24,10 +24,9 @@ def remove_dup_vert(lines):
         else :
             x3, y3, x4, y4 = res[len(res)-1]
             if (x1!=x3 or y1!=y3 or x2!=x4 or y2!=y4):
-                if (abs(x1-x3) <= 1) and (y1 >= y3) and (y2 <= y4):
+                if (abs(x1-x3) <= 3) and (y1 >= y3) and (y2 <= y4):
                     continue
                 res.append(lines[index])
-                
     return res
 
 def check_in_range(range_begin, range_end, point):
@@ -36,7 +35,6 @@ def check_in_range(range_begin, range_end, point):
     
     return False
         
-# this function has logical errors ############################
 def get_cells(horiz_lines, vert_lines):
     cells = []
     
@@ -75,7 +73,7 @@ def get_cells(horiz_lines, vert_lines):
                     
                 cell =[0, L1_y1+1, 0, L2_y1-1]
                 for V_x1, V_y1, V_x2, V_y2 in vert_lines:
-                    if (V_y1 <= L1_y1+1 and V_y2 >= L2_y1-1 and V_x1 >= s_x and V_x1 <= l_x) :
+                    if (V_y1 <= L1_y1+5 and V_y2 >= L2_y1-5 and V_x1 >= s_x-5 and V_x1 <= l_x+5) :
                         if cell[0] == 0:
                             cell[0] = V_x1 + 1
                         elif not check_in_range(old_begin, old_end, cell[0]+2):
@@ -85,7 +83,87 @@ def get_cells(horiz_lines, vert_lines):
                             cell[0] = V_x1 + 1
     
     return cells
+
+def find_table(img):
+    grayimg = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    binary_img = cv2.adaptiveThreshold(~grayimg, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2)
     
+    horiz_img = binary_img.copy()
+    vert_img = binary_img.copy()
+    
+    scale = 10;
+    
+    # horizontal lines
+    horizontalsize = int(horiz_img.shape[0] / scale)
+    horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT,(horizontalsize, 1))
+    horiz_img = cv2.erode(horiz_img, horizontalStructure, iterations = 1)
+    horiz_img = cv2.dilate(horiz_img, horizontalStructure, iterations = 1)
+    edges = cv2.Canny(horiz_img, 100, 200, apertureSize=3)
+    _, contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    horiz_lines = []
+    mask = np.zeros((img.shape), np.uint8)
+    for cnt in contours:
+        x,y,w,h = cv2.boundingRect(cnt)
+        y = int(y + h / 2)
+        horiz_lines.append([x,y,x+w,y])
+        #cv2.rectangle(mask,(x,y),(x+w,y+h),(0,255,0), 1)
+    
+    horiz_lines = np.array(horiz_lines).tolist()
+    horiz_lines.sort(key=lambda x: x[2]-x[0], reverse=True)
+    horiz_lines.sort(key=lambda x: x[1])
+    horiz_lines = remove_dup_horiz(horiz_lines)
+    #print("horiz", horiz_lines)
+    
+    #DEBUG
+    """
+    for x1, y1, x2, y2 in horiz_lines:
+        cv2.line(mask, (x1,y1), (x2,y2), (0,255,0), 1)
+    """
+
+    # vertical lines
+    #verticalsize = int(vert_img.shape[1] / scale)
+    verticalsize = 20  # 짧은 세로선이 존재(20px 이상이면 세로선으로 간주)
+    verticalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, verticalsize))
+    vert_img = cv2.erode(vert_img, verticalStructure, iterations=1)
+    vert_img = cv2.dilate(vert_img, verticalStructure, iterations=1)
+    edges = cv2.Canny(vert_img, 100, 200, apertureSize=3)
+    _, contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    vert_lines = []
+    for cnt in contours:
+        x,y,w,h = cv2.boundingRect(cnt);
+        x = int(x + w / 2)
+        vert_lines.append([x,y,x,y+h])
+        
+    vert_lines = np.array(vert_lines).tolist()
+    vert_lines.sort(key=lambda x: x[3]-x[1], reverse=True)
+    vert_lines.sort(key=lambda x: x[0])
+    vert_lines = remove_dup_vert(vert_lines)
+    #print("vert", vert_lines)
+    
+    #DEBUG
+    """
+    for x1, y1, x2, y2 in vert_lines:
+        cv2.line(mask, (x1,y1), (x2,y2), (0,0,255), 1)
+    """
+    
+    cells = get_cells(horiz_lines, vert_lines)
+    print ("cells", cells)
+    
+    #DEBUG
+    
+    for x1, y1, x2, y2 in cells:
+        cv2.rectangle(mask, (x1,y1), (x2,y2), (255,255,0), 1)
+    
+    global number
+    cv2.imwrite("table2_res%d.png" % number, mask)
+    number += 1
+    
+    return cells
+
+number = 0
+
     
 if __name__ == '__main__':
     if len(sys.argv) != 2:
@@ -159,4 +237,3 @@ if __name__ == '__main__':
     
     cv2.imwrite("table2_res.png", mask)
     
-
