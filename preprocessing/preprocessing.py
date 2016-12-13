@@ -28,7 +28,7 @@ from scipy.ndimage.filters import rank_filter
 
 from util import *
 
-import table
+import table2 as table
 
 '''
 ' name: Table
@@ -147,11 +147,13 @@ output: binary image
 '''
 def thresholding(rawimg):
     grayimg = cv2.cvtColor(rawimg,cv2.COLOR_BGR2GRAY)
-    #stretched = grayimg
     subtracted = numpy.clip(grayimg - lsm(grayimg), 0, 255).astype(numpy.uint8)
-    blur = cv2.GaussianBlur(subtracted,(1,1),0)
-    ths, binary_img = cv2.threshold(~blur,32,255,cv2.THRESH_TOZERO)
+    #scale, stretched = stretch_image(subtracted)
+    #print("scale = ", scale)
+    #blur = cv2.GaussianBlur(stretched,(3,3),0)
+    ths, binary_img = cv2.threshold(~subtracted,32,255,cv2.THRESH_TOZERO)
     binary_img = numpy.clip(binary_img.astype(numpy.float) * 450 / numpy.amax(binary_img), 0, 255).astype(numpy.uint8)
+    #binary_img = scale_image(binary_img, 1 / scale)
     #binary_img = cv2.adaptiveThreshold(stretched, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 65, -2);
     #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
     #                      cv2.THRESH_BINARY_INV, 11, 2)
@@ -377,7 +379,7 @@ def rotate_image(image):
         cv2.imwrite('{}_{}.png'.format('rotbox',rect[2]), mask)
         """
         angle = abs(rect[2])
-        print(angle)
+        #print(angle)
         if angle > 45: angle = angle - 90 
         mat = cv2.getRotationMatrix2D(rect[0], -angle, 1)
         image = cv2.warpAffine(image, mat, (image.shape[1], image.shape[0]), image.size, cv2.INTER_CUBIC, cv2.BORDER_CONSTANT, (255,255,255))
@@ -397,6 +399,14 @@ def open_image(path):
     # solve auto-rotated problem after Image.open()
     return image
 
+def scale_image(image, scale):
+    if scale < 1:
+        return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    elif scale > 1:
+        return cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+    else:
+        return image
+
 '''
 ' name: shrink_image
 ' function: shrink image(denoise & easily processed)
@@ -409,7 +419,7 @@ def shrink_image(image):
         return 1.0, image
     
     scale = 1.0 * MAX_DIM / max(image.shape[0], image.shape[1])
-    new_image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    new_image = scale_image(image, scale)
     return scale, new_image
 
 '''
@@ -419,12 +429,12 @@ def shrink_image(image):
 ' output: stretched image
 '''
 def stretch_image(image):
-    MIN_DIM = 256
+    MIN_DIM = 512
     if min(image.shape[0], image.shape[1]) >= MIN_DIM:
         return 1.0, image
     
     scale = 1.0 * MIN_DIM / min(image.shape[0], image.shape[1])
-    new_image = cv2.resize(image, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+    new_image = scale_image(image, scale)
     return scale, new_image
 
 '''
@@ -498,24 +508,24 @@ def preprocess_image(img, out_path=None, save=False):
         
         for j, trect in enumerate(tables):
                 t = rot_img[trect[1]:trect[3], trect[0]:trect[2]]
-                info = table.find_table(t)
+                cells = table.find_table(t)
                 if save:
                     outfname = '{}_{}_{}_{}.png'.format(out_path, 'table', i, j)
                     cv2.imwrite(outfname, binary_img)
                     print ('    -> %s' % (outfname))
-                if info is None:
-                    print("table info None")
+                if cells is None:
+                    #print("table info None")
                     continue
 
-                for row_cells in info:
-                    for cell in row_cells:
-                        if cell[2] == 1: continue # Merged cell
-                        cell_rect = (trect[0]+cell[5], trect[1]+cell[6], trect[0]+cell[7], trect[1]+cell[8])
-                        if cell_rect[2] - cell_rect[0] < 2 or cell_rect[3] - cell_rect[1] < 2:
-                            continue
-                        cell_img = numpy.copy(binary_img[cell_rect[1]:cell_rect[3], cell_rect[0]:cell_rect[2]])
-                        parag = Paragraph(img = cell_img, rect = cell_rect)
-                        layouts.append(parag)
+                for cell in cells:
+                    cell_rect = (rect[0]+trect[0]+cell[0] + 5, rect[1]+trect[1]+cell[1] + 5,
+                            rect[0]+trect[0]+cell[2] - 5, rect[1]+trect[1]+cell[3] - 5)
+                    if cell_rect[2] - cell_rect[0] < 2 or cell_rect[3] - cell_rect[1] < 2:
+                        continue
+                    cell_img = numpy.copy(binary_img[cell_rect[1]-rect[1]:cell_rect[3]-rect[3],
+                            cell_rect[0]-rect[0]:cell_rect[2]-rect[2]])
+                    parag = Paragraph(img = cell_img, rect = cell_rect)
+                    layouts.append(parag)
                 binary_img[trect[1]:trect[3], trect[0]:trect[2]].fill(0) # Remove out table area
 
         parag = Paragraph(img = binary_img, rect = rect)

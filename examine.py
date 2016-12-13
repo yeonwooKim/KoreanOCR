@@ -31,9 +31,7 @@ def simple_preproc(img, threshold=True):
 
     return cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
-def get_txt(imgname, img, verbose=False, is_json=False, is_simple=False):
-    """이미지를 각 모듈에 순서대로 넘겨줌.
-    분석된 최종 문자열을 반환"""
+def pre_reconst(img, verbose=False, is_simple=False):
     if verbose: print_msg("preprocessing..")
     if is_simple:
         layouts = [
@@ -52,11 +50,19 @@ def get_txt(imgname, img, verbose=False, is_json=False, is_simple=False):
 
     if verbose: print_msg("semantic..")
     graphs = semantic.analyze(graphs)
+    return graphs
 
+def get_txt(img, verbose=False, is_simple=False):
+    """이미지를 각 모듈에 순서대로 넘겨줌.
+    분석된 최종 문자열을 반환"""
+    graphs = pre_reconst(img, verbose, is_simple)
     if verbose: print_msg("reconst..")
-    
-    if is_json: return reconst.build_json(imgname, graphs)
-    else: return reconst.build_graphs(graphs)
+    return reconst.build_graphs(graphs)
+
+def get_json(imgname, img, verbose=False, is_simple=False):
+    graphs = pre_reconst(img, verbose, is_simple)
+    if verbose: print_msg("reconst..")
+    return reconst.build_json(imgname, graphs)
 
 msg_help = """python examine.py <image_path>
 -l --letter letter mode
@@ -73,7 +79,7 @@ def get_char(img):
     graphs = semantic.analyze(graphs)
     return reconst.build_graphs(graphs)
 
-def pil_to_cv(image):
+def fix_pil_rot(image):
     if image is None: return None
     for orientation in ExifTags.TAGS.keys(): 
         if ExifTags.TAGS[orientation]=='Orientation' : break 
@@ -85,6 +91,11 @@ def pil_to_cv(image):
             image = image.rotate(270, expand=True)
         elif exif[orientation] == 8:
             image = image.rotate(90, expand=True)
+    return image
+
+def pil_to_cv(image):
+    if image is None: return None
+    image = fix_pil_rot(image)
     imgarr = np.array(image)
     if len(imgarr.shape) > 2:
         return cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
@@ -123,7 +134,6 @@ def main(argv):
 
     try:
         img = pil_to_cv(Image.open(args[0]))
-        imgname = os.path.basename(args[0])
     except:
         print("Invalid image file")
         exit(1)
@@ -131,10 +141,13 @@ def main(argv):
     if invert:
         img = 255-img
 
-    if not letter:
-        print(get_txt(imgname, img, verbose, is_json, is_simple))
-    else:
+    if letter:
         print(get_char(img))
+    elif is_json:
+        imgname = os.path.basename(args[0])
+        print(get_json(imgname, img, verbose, is_simple))
+    else:
+        print(get_txt(img, verbose, is_simple))
 
 if __name__ == "__main__":
     main(sys.argv[1:])

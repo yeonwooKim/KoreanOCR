@@ -107,22 +107,28 @@ def calc_width(word):
 		width.append(i[1] - i[0])
 	return width
 
+FIND_SPLIT_STRICT = 40 # 클수록 letter_size와 비슷한 지점을 찾는다
 def find_split_pts(index, num_letter, size, img):
-	(_, w) = img.shape
+	(h, w) = img.shape
 	i = 0
 	pts = []
-	while num_letter != 0:
-		pt, m = -1, float("inf")
-		for j in range (i + round(size) + 1, min(w, i + round(size) + 5)):
-			s = sumup_col(img, j)
-			if (s <= m):
+
+	min_pt = round(size * 0.6)
+	max_pt = round(size * 1.4)
+
+	while True:
+		pt = i
+		m = float("inf")
+		for j in range (i + min_pt, min(w, i + max_pt)):
+			s = sumup_col(img, j) + ((j - i - size) ** 2) * FIND_SPLIT_STRICT * h
+			if s <= m:
 				pt = j
 				m = s
-		if pt == -1:
-			pt = w - 1
 		pts.append((index + i, index + pt))
+		if pt == i or pt+size * 1.5 >= w:
+			break
 		i = pt
-		num_letter = num_letter - 1
+
 	return pts
 
 # Merges and splits letters considering the context
@@ -185,6 +191,21 @@ def thd_pass(line, size, candidate):
 		thd_candidate.append(thd_word)
 	return thd_candidate
 
+def proc_line(line):
+	(letter_size, fst_c) = fst_pass(line.img)
+	c1 = snd_pass(line.img, letter_size, fst_c, 0.6, 1.3, 0)
+	c1 = thd_pass(line.img, letter_size, c1)
+	
+	c2 = snd_pass(line.img, letter_size, fst_c, 0.8, 1.1, 0)
+	c2 = thd_pass(line.img, letter_size, c2)
+
+	c3 = snd_pass(line.img, letter_size, fst_c, 0.7, 0.9, 0)
+	c3 = thd_pass(line.img, letter_size, c3)
+	# Generous merge threshold
+	c4 = snd_pass(line.img, letter_size, fst_c, None, None, 1)
+	c4 = thd_pass(line.img, letter_size, c4)
+	return c1, c2, c3, c4
+'''
 # Given a paragraph, processes 2 times and returns the candidate word points
 def proc_paragraph(para):
 	fst_candidate = []
@@ -217,6 +238,7 @@ def proc_paragraph(para):
 		c4 = thd_pass(line.img, letter_size, c4)
 		snd_candidate4.append(c4)
 	return (snd_candidate1, snd_candidate2, snd_candidate3, snd_candidate4)
+'''
 
 # Implemented for testing; truncates line image to letters and saves letter images
 # with word and letter information
@@ -316,6 +338,7 @@ def compare_pass(candidates):
 		i4 = i4 + p4 + 1
 	return char_list
 
+'''
 def argmin(items):
 	min_idxs = []
 	min_elm = float("inf")
@@ -326,10 +349,11 @@ def argmin(items):
 		elif min_elm == elm:
 			min_idxs.append(idx)
 	return min_idxs, min_elm
+'''
 
 # Truncates line image to letters and constructs line classes
-def update_line(line, candidates):
-	(c1, c2, c3, c4) = candidates
+def update_line(line):
+	(c1, c2, c3, c4) = proc_line(line)
 	for i in range(len(c1)):
 		char_list = compare_pass((c1[i], c2[i], c3[i], c4[i]))
 		line.chars.extend(char_list)
@@ -338,19 +362,15 @@ def update_line(line, candidates):
 
 # Given a paragraph image, constructs a paragraph class
 def update_paragraph(para):
-	proc = proc_paragraph(para)
-	if proc is None: return
-	(c1, c2, c3, c4) = proc
-	for i, line in enumerate(para.lines):
-		update_line(line, (c1[i], c2[i], c3[i], c4[i]))	
+	for line in para.lines:
+		update_line(line)	
 
 # reconst 모듈로 넘겨줄 paragraph list를 생성
 # paragraph 하나를 input으로 받아 여러 paragraph로 분리
 def get_graphs(paragraph):
-	line_graphs = dl.output_line_imgs(paragraph)
-	for graph in line_graphs:
-		update_paragraph(graph)
-	return line_graphs
+	dl.update_paragraph(paragraph)
+	update_paragraph(paragraph)
+	return [paragraph]
 
 if __name__ == "__main__":
 	main()

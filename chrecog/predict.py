@@ -91,6 +91,7 @@ def reshape_with_margin(img, size=32, pad=4):
         margin_img = np.zeros([margin, dim])
         reshaped = np.r_[margin_img, img, margin_img]
     reshaped = cv2.resize(reshaped, (size-pad*2, size-pad*2), interpolation = cv2.INTER_AREA)
+
     if pad > 0:
         padded = np.zeros([size, size])
         padded[pad:-pad, pad:-pad] = reshaped
@@ -105,7 +106,7 @@ def set_img(l, allc, allimg, c):
         c.value = ""
         c.prob = 1.0
         return
-    c.img = reshape_with_margin(l.img[:, c.pt[0]:c.pt[1]]) / 255
+    c.img = reshape_with_margin(l.img[:, c.pt[0]:c.pt[1]], pad=5) / 255
     allc.append(c)
     allimg.append(c.img)
 

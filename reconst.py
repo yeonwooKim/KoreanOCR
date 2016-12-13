@@ -79,9 +79,9 @@ def assemble_line(lines):
     prev_y = None
     line_buf = []
     for l in lines:
-        if prev_y is not None and prev_y+10 < l.rect[1]:
+        if prev_y is not None and prev_y+20 < l.rect[1] + l.rect[3]:
             text.append(flush_line_buf(line_buf))
         line_buf.append(l)
-        prev_y = l.rect[1]
+        prev_y = l.rect[1] + l.rect[3]
     text.append(flush_line_buf(line_buf))
     return text

@@ -149,7 +149,7 @@ def find_table(img):
     """
     
     cells = get_cells(horiz_lines, vert_lines)
-    print ("cells", cells)
+    #print ("cells", cells)
     
     #DEBUG
     

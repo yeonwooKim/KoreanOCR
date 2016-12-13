@@ -56,6 +56,16 @@ def sumup_col(img, col_number):
 		sum = sum + img.item(i, col_number)
 	return sum / length * 1000
 
+'''
+def sumup_col_outer_weight(img, col_number, weight):
+	sum = 0
+	(length, _) = img.shape
+	if length == 0: return 0
+	for i in range (0, length):
+		sum = sum + img.item(i, col_number) + (i - length) ** 2 * weight
+	return sum / length * 500
+'''
+
 # Trims line images
 def trim_line(img):
 	(x, y) = img.shape
