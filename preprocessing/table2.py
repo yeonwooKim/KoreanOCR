@@ -35,6 +35,37 @@ def check_in_range(range_begin, range_end, point):
     
     return False
         
+def horiz_complement(horiz_lines):
+    if (len(horiz_lines) == 0): return horiz_lines
+    last_lines = []
+    
+    last_line =  horiz_lines[len(horiz_lines)-1]
+    last_lines.append(last_line)
+    lasty = last_line[1]
+    
+    for i in range(len(horiz_lines)-2, 0, -1):
+        line = horiz_lines[i]
+        if line[1] <= lasty+3 and line[1] >= lasty-3:
+            last_lines.append(line)
+        else:
+            break
+    
+    if (len(last_lines) <= 1): return horiz_lines
+    
+    last_lines.sort(key = lambda x: x[0])
+    leftx = last_lines[0][0]
+    rightx = last_lines[len(last_lines)-1][2]
+    
+    last_lines.sort(key = lambda x: x[1], reverse = True)
+    newy = last_lines[0][1]
+    
+    newline = (leftx, newy, rightx, newy)
+    new_horiz = horiz_lines[:len(horiz_lines)-len(last_lines)]
+    new_horiz.append(newline)
+    
+    return new_horiz       
+    
+    
 def get_cells(horiz_lines, vert_lines):
     cells = []
     
@@ -113,6 +144,7 @@ def find_table(img):
     horiz_lines.sort(key=lambda x: x[2]-x[0], reverse=True)
     horiz_lines.sort(key=lambda x: x[1])
     horiz_lines = remove_dup_horiz(horiz_lines)
+    horiz_lines = horiz_complement(horiz_lines)
     #print("horiz", horiz_lines)
     
     #DEBUG
@@ -152,14 +184,14 @@ def find_table(img):
     #print ("cells", cells)
     
     #DEBUG
-    
+    """
     for x1, y1, x2, y2 in cells:
         cv2.rectangle(mask, (x1,y1), (x2,y2), (255,255,0), 1)
     
     global number
     cv2.imwrite("table2_res%d.png" % number, mask)
     number += 1
-    
+    """
     return cells
 
 number = 0
