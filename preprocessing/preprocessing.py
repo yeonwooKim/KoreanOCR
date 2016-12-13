@@ -133,7 +133,7 @@ def lsm(grayimg):
     Ap = numpy.linalg.pinv(flatgrid)
     params = numpy.dot(Ap, grayimg.flat)
 
-    param_without_const = numpy.array([params[0], params[1], 0])
+    param_without_const = numpy.array([params[0], params[1], 0.5])
 
     lsm_mat = numpy.dot(flatgrid, param_without_const).reshape(grayimg.shape)
     return lsm_mat
@@ -150,8 +150,8 @@ def thresholding(rawimg):
     #stretched = grayimg
     subtracted = numpy.clip(grayimg - lsm(grayimg), 0, 255).astype(numpy.uint8)
     blur = cv2.GaussianBlur(subtracted,(1,1),0)
-    ths, binary_img = cv2.threshold(~blur,0,255,cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
-    binary_img = numpy.clip(binary_img.astype(numpy.float) * 350 / numpy.amax(binary_img), 0, 255).astype(numpy.uint8)
+    ths, binary_img = cv2.threshold(~blur,32,255,cv2.THRESH_TOZERO)
+    binary_img = numpy.clip(binary_img.astype(numpy.float) * 450 / numpy.amax(binary_img), 0, 255).astype(numpy.uint8)
     #binary_img = cv2.adaptiveThreshold(stretched, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 65, -2);
     #binary_img = cv2.adaptiveThreshold(grayimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
     #                      cv2.THRESH_BINARY_INV, 11, 2)
@@ -491,18 +491,10 @@ def preprocess_image(img, out_path=None, save=False):
         rot_img = rotate_image(denoised_img)
         
         tables = find_table_area(rot_img)
-        #tables = []
-        # there is no table in the image
-        if len(tables) == 0:
-            binary_img = thresholding(rot_img)
-            parag = Paragraph(img = binary_img, rect = rect)
-            layouts.append(parag)
-            if save:
-                outfname = '{}_{}_{}.png'.format(out_path, 'paragraph', i)
-                cv2.imwrite(outfname, binary_img)
-                print ('    -> %s' % (outfname))
-        else:    
-            for j, trect in enumerate(tables):
+
+        binary_img = thresholding(rot_img)
+        
+        for j, trect in enumerate(tables):
                 t = rot_img[trect[1]:trect[3], trect[0]:trect[2]]
                 info = table.find_table(t)
                 if save:
@@ -512,17 +504,24 @@ def preprocess_image(img, out_path=None, save=False):
                 if info is None:
                     print("table info None")
                     continue
-                else:
-                    for row_cells in info:
-                        for cell in row_cells:
-                            if cell[2] == 1: continue # Merged cell
-                            cell_rect = (trect[0]+cell[5], trect[1]+cell[6], trect[0]+cell[7], trect[1]+cell[8])
-                            if cell_rect[2] - cell_rect[0] < 2 or cell_rect[3] - cell_rect[1] < 2:
-                                continue
-                            binary_img = thresholding(rot_img[cell_rect[1]:cell_rect[3], cell_rect[0]:cell_rect[2]])
-                            parag = Paragraph(img = binary_img, rect = cell_rect)
-                            layouts.append(parag)
-                #print(info)
+
+                for row_cells in info:
+                    for cell in row_cells:
+                        if cell[2] == 1: continue # Merged cell
+                        cell_rect = (trect[0]+cell[5], trect[1]+cell[6], trect[0]+cell[7], trect[1]+cell[8])
+                        if cell_rect[2] - cell_rect[0] < 2 or cell_rect[3] - cell_rect[1] < 2:
+                            continue
+                        cell_img = numpy.copy(binary_img[cell_rect[1]:cell_rect[3], cell_rect[0]:cell_rect[2]])
+                        parag = Paragraph(img = cell_img, rect = cell_rect)
+                        layouts.append(parag)
+                binary_img[trect[1]:trect[3], trect[0]:trect[2]].fill(0) # Remove out table area
+
+        parag = Paragraph(img = binary_img, rect = rect)
+        layouts.append(parag)
+        if save:
+            outfname = '{}_{}_{}.png'.format(out_path, 'paragraph', i)
+            cv2.imwrite(outfname, binary_img)
+            print ('    -> %s' % (outfname))
     #print(layouts)    
     return layouts
         

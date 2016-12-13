@@ -186,7 +186,7 @@ def analyze(graphs):
             analyze_sibiling(l.chars)
             sum_rot = sum(c.rotten_point for c in l.chars)
             sum_lenval = sum(len(c.value) for c in l.chars)
-            linerot = sum_rot / sum_lenval+1
+            linerot = sum_rot / (sum_lenval+1)
             if linerot > 40: l.chars = []
             #for c in l.chars:
             #    print("(%2d, %4d, %4d, %4d) %s" % (i_l, c.pt[0], c.pt[1], c.rotten_point, c.value))
