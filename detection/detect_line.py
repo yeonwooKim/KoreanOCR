@@ -135,7 +135,7 @@ def save_line_imgs(paragraph, trunc_row):
 BLANK_THD_FACTOR = 1.5 # 높으면 글자들이 더 잘게 잘림
 OUTPUT_LINE_SIZE = 64
 def update_paragraph(paragraph):
-	lines_1 = get_lines(paragraph, FIND_ROW, paragraph.img.shape[1] * BLANK_THD_FACTOR, 0)
+	lines_1 = get_lines(paragraph, FIND_ROW, 1000 * BLANK_THD_FACTOR, 0)
 	lines_2 = []
 	lines_3 = []
 

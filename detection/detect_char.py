@@ -193,6 +193,7 @@ def thd_pass(line, size, candidate):
 
 def proc_line(line):
 	(letter_size, fst_c) = fst_pass(line.img)
+	if letter_size < 2 : return ([], [], [], [])
 	c1 = snd_pass(line.img, letter_size, fst_c, 0.6, 1.3, 0)
 	c1 = thd_pass(line.img, letter_size, c1)
 	
