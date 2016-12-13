@@ -36,6 +36,7 @@ def check_in_range(range_begin, range_end, point):
     return False
         
 def horiz_complement(horiz_lines):
+    if (len(horiz_lines) == 0): return horiz_lines
     last_lines = []
     
     last_line =  horiz_lines[len(horiz_lines)-1]
@@ -183,14 +184,14 @@ def find_table(img):
     print ("cells", cells)
     
     #DEBUG
-    
+    """
     for x1, y1, x2, y2 in cells:
         cv2.rectangle(mask, (x1,y1), (x2,y2), (255,255,0), 1)
     
     global number
     cv2.imwrite("table2_res%d.png" % number, mask)
     number += 1
-    
+    """
     return cells
 
 number = 0
