@@ -81,16 +81,25 @@ def get_char(img):
 
 def fix_pil_rot(image):
     if image is None: return None
+
+    if not hasattr(image, "_getexif") or image._getexif() is None:
+         return image
+
     for orientation in ExifTags.TAGS.keys(): 
         if ExifTags.TAGS[orientation]=='Orientation' : break 
-    if hasattr(image, "_getexif") and image._getexif() is not None:
-        exif = dict(image._getexif().items())
-        if exif[orientation] == 3:
-            image = image.rotate(180, expand=True)
-        elif exif[orientation] == 6:
-            image = image.rotate(270, expand=True)
-        elif exif[orientation] == 8:
-            image = image.rotate(90, expand=True)
+   
+    exif = dict(image._getexif().items())
+    
+    if orientation not in exif:
+        return image
+
+    if exif[orientation] == 3:
+        image = image.rotate(180, expand=True)
+    elif exif[orientation] == 6:
+        image = image.rotate(270, expand=True)
+    elif exif[orientation] == 8:
+        image = image.rotate(90, expand=True)
+
     return image
 
 def pil_to_cv(image):
