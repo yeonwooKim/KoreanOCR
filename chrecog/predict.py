@@ -106,7 +106,7 @@ def set_img(l, allc, allimg, c):
         c.value = ""
         c.prob = 1.0
         return
-    c.img = reshape_with_margin(l.img[:, c.pt[0]:c.pt[1]], pad=5) / 255
+    c.img = reshape_with_margin(l.img[:, c.pt[0]:c.pt[1]], pad=3) / 255
     allc.append(c)
     allimg.append(c.img)
 

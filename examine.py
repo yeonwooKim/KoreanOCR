@@ -41,9 +41,7 @@ def pre_reconst(img, verbose=False, is_simple=False):
         layouts = preprocess_image(img)
 
     if verbose: print_msg("detecting..")
-    graphs = []
-    for para in layouts:
-        graphs.extend(detection.get_graphs(para))
+    graphs = detection.get_graphs(layouts)
 
     if verbose: print_msg("recognizing..")
     graphs = chrecog.predict.get_pred(graphs)

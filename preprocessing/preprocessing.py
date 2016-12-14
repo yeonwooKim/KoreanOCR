@@ -82,6 +82,9 @@ def denoising(rawimg):
     mask = numpy.zeros((grayimg.shape),numpy.uint8)
     kernel1 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(11,11))
     close = cv2.morphologyEx(grayimg,cv2.MORPH_CLOSE,kernel1)
+    #if numpy.argmin(close) == 0:
+    #    print("denoising: zero divide detected")
+    #    return rawimg
     div = numpy.float32(grayimg)/(close)
     normal_img = numpy.uint8(cv2.normalize(div,div,20,255,cv2.NORM_MINMAX))
     resultimg = cv2.cvtColor(normal_img,cv2.COLOR_GRAY2BGR)

@@ -88,10 +88,9 @@ def label_paragraph(trunc_row, height):
 '''
 # Truncates the paragraph to lines
 # Returns list of Line objects
-def get_lines(paragraph, row_col = FIND_ROW, blank_thd = 2000, distance_thd = 0):
+def get_lines(img, rect, row_col = FIND_ROW, blank_thd = 2000, distance_thd = 0):
 	"""Instead of array of images, return array of Line objects
 	to maintain coordinates of each line in the original image"""
-	img = paragraph.img
 	trunc = find_trunc(img, row_col, blank_thd, distance_thd)
 	lines = []
 	l = len(trunc)
@@ -114,12 +113,12 @@ def get_lines(paragraph, row_col = FIND_ROW, blank_thd = 2000, distance_thd = 0)
 				trunc_rect = (0, max(0, trunc[i][0]-pad), img.shape[1], min(img.shape[0], trunc[i][1]+pad))
 
 			im = img[trunc_rect[1]:trunc_rect[3]]
-			line_rect = get_rect(img.shape, paragraph.rect, trunc_rect)
+			line_rect = get_rect(img.shape, rect, trunc_rect)
 			lines.append(Line(img=im, rect=line_rect))
 	else:
 		for trunc_elm in trunc:
 			im = img[:, trunc_elm[0]:trunc_elm[1]]
-			line_rect = get_rect(img.shape, paragraph.rect, (trunc_elm[0], 0, trunc_elm[1], img.shape[0]))
+			line_rect = get_rect(img.shape, rect, (trunc_elm[0], 0, trunc_elm[1], img.shape[0]))
 			lines.append(Line(img=im, rect=line_rect))
 	return lines
 '''
@@ -133,9 +132,9 @@ def save_line_imgs(paragraph, trunc_row):
 		cv2.imwrite(name, lines[i].img)
 '''
 BLANK_THD_FACTOR = 1.5 # 높으면 글자들이 더 잘게 잘림
-OUTPUT_LINE_SIZE = 64
-def update_paragraph(paragraph):
-	lines_1 = get_lines(paragraph, FIND_ROW, 1000 * BLANK_THD_FACTOR, 0)
+OUTPUT_LINE_SIZE = 48
+def get_paragraph_lines(para_img, para_rect):
+	lines_1 = get_lines(para_img, para_rect, FIND_ROW, 1000 * BLANK_THD_FACTOR, 0)
 	lines_2 = []
 	lines_3 = []
 
@@ -146,7 +145,7 @@ def update_paragraph(paragraph):
 			distance_thd = line.img.shape[0] * 0.5 # It's likely long line
 		else:
 			distance_thd = line.img.shape[0] * 0.3
-		lines_2.extend(get_lines(line, FIND_COL, line.img.shape[0] * BLANK_THD_FACTOR, distance_thd))
+		lines_2.extend(get_lines(line.img, line.rect, FIND_COL, line.img.shape[0] * BLANK_THD_FACTOR, distance_thd))
 
 	for line in lines_2:
 		if line.img.shape[0] < 6 or line.img.shape[1] < 2:
@@ -156,13 +155,21 @@ def update_paragraph(paragraph):
 			distance_thd = 0
 		else:
 			distance_thd = line.img.shape[0] * 0.3
-		lines_3.extend(get_lines(line, FIND_ROW, line.img.shape[1] * BLANK_THD_FACTOR, distance_thd))
-	paragraph.lines = lines_3
+		lines_3.extend(get_lines(line.img, line.rect, FIND_ROW, line.img.shape[1] * BLANK_THD_FACTOR, distance_thd))
 
-	for line in paragraph.lines:
-		if line.img.shape[0] > OUTPUT_LINE_SIZE:
-			scale = 1.0 * OUTPUT_LINE_SIZE / line.img.shape[0]
-			line.img = cv2.resize(line.img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+	ret = []
+	for line in lines_3:
+		if line.img.shape[0] < 6 or line.img.shape[1] < 2:
+			continue
+		ret.append(line)
+
+	#for line in lines_3:
+	#	if line.img.shape[0] > OUTPUT_LINE_SIZE:
+	#		scale = 1.0 * OUTPUT_LINE_SIZE / line.img.shape[0]
+	#		line.img = cv2.resize(line.img, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+
+	return ret
+
 # Outputs line imgs in the form of following:
 # Divide one paragraph into many
 # paragraph_n = [line_1, line_2, ...]

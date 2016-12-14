@@ -191,21 +191,11 @@ def thd_pass(line, size, candidate):
 		thd_candidate.append(thd_word)
 	return thd_candidate
 
-def proc_line(line):
-	(letter_size, fst_c) = fst_pass(line.img)
-	if letter_size < 2 : return ([], [], [], [])
-	c1 = snd_pass(line.img, letter_size, fst_c, 0.6, 1.3, 0)
-	c1 = thd_pass(line.img, letter_size, c1)
-	
-	c2 = snd_pass(line.img, letter_size, fst_c, 0.8, 1.1, 0)
-	c2 = thd_pass(line.img, letter_size, c2)
-
-	c3 = snd_pass(line.img, letter_size, fst_c, 0.7, 0.9, 0)
-	c3 = thd_pass(line.img, letter_size, c3)
-	# Generous merge threshold
-	c4 = snd_pass(line.img, letter_size, fst_c, None, None, 1)
-	c4 = thd_pass(line.img, letter_size, c4)
-	return c1, c2, c3, c4
+def proc_line(line_img, letter_size, fst_c, merge_thdl, merge_thdh, flag):
+	if letter_size < 2 : return []
+	candidate = snd_pass(line_img, letter_size, fst_c, merge_thdl, merge_thdh, flag)
+	candidate = thd_pass(line_img, letter_size, candidate)
+	return candidate
 '''
 # Given a paragraph, processes 2 times and returns the candidate word points
 def proc_paragraph(para):
@@ -256,6 +246,7 @@ def trunc_n_save_letter(para_num, line_num, pass_num, line, candidate):
 			cnt_letter = cnt_letter + 1
 		cnt_word = cnt_word + 1
 
+'''
 # Implemented for testing; Given an essay, processes 2 times and saves letters as images
 def save_essay(essay):
 	for i, graph in enumerate(essay):
@@ -265,27 +256,37 @@ def save_essay(essay):
 			trunc_n_save_letter(i, j, 2, line.img, c2[j])
 			trunc_n_save_letter(i, j, 3, line.img, c3[j])
 			trunc_n_save_letter(i, j, 4, line.img, c4[j])
+'''
 
 # Given four lists (candidate lists of different threshold),
 # finds the indices for each list with the same end points
 # returns them in a tuple along with the value of the end point
-def find_common_pt(list1, list2, list3, list4):
-	i1, i2, i3, i4 = 0, 0, 0, 0
-	l1, l2, l3, l4 = len(list1), len(list2), len(list3), len(list4)
-	while (i1 < l1 and i2 < l2 and i3 < l3 and i4 < l4):
-		e1, e2, e3, e4 = list1[i1][1], list2[i2][1], list3[i3][1], list4[i4][1]
-		m = min(e1, e2, e3, e4)
-		if e1 == e2 and e2 == e3 and e3 == e4:
-			break;
-		if m == e1:
-			i1 = i1 + 1
-		if m == e2:
-			i2 = i2 + 1
-		if m == e3:
-			i3 = i3 + 1
-		if m == e4:
-			i4 = i4 + 1
-	return (m, i1, i2, i3, i4)
+def find_first_common_pt(clists):
+	idxes = [0 for clist in clists]
+	lens = [len(clist) for clist in clists]
+	end_list = [clist[0][1] for clist in clists]
+	min_end = min(end_list)
+
+	while True:
+		abort = True
+		for i in range(1, len(end_list)):
+			if end_list[i-1] != end_list[i]:
+				abort = False
+				break
+		if abort: break
+
+		abort = False
+		for i in range(len(end_list)):
+			if end_list[i] == min_end:
+				idxes[i] += 1
+				if idxes[i] >= lens[i]:
+					abort = True
+					break
+				end_list[i] = clists[i][idxes[i]][1]
+		if abort: break
+		min_end = min(end_list)
+	
+	return min_end, idxes
 
 # Given the four candidates, each candidate having form of
 # candidate ::= [ point1, point2, ... , pointN ]
@@ -293,50 +294,33 @@ def find_common_pt(list1, list2, list3, list4):
 # returns list of characters
 def compare_pass(candidates):
 	char_list = []
-	(c1, c2, c3, c4) = candidates
-	i1, i2, i3, i4 = 0, 0, 0, 0
-	l1, l2, l3, l4 = len(c1), len(c2), len(c3), len(c4)
-	while (i1 < l1 and i2 < l2 and i3 < l3 and i4 < l4):
-		(m, p1, p2, p3, p4) = find_common_pt(c1[i1:], c2[i2:], c3[i3:], c4[i4:])
-		char = Char((c1[i1][0], m), CHARTYPE.CHAR)
-		if not (p1 == 0 and p2 == 0 and p3 == 0 and p4 == 0):
-			curr = char
-			for i in range (0, p1 + 1):
-				a = Char(c1[i1 + i], CHARTYPE.CHAR)
-				curr.add_child(a)
-				curr = a
-			curr = char
-			for i in range (0, p2 + 1):
-				child = curr.get_child(c2[i2 + i])
-				if child == None:
-					a = Char(c2[i2 + i], CHARTYPE.CHAR)
-					curr.add_child(a)
-					curr = a
-				else:
-					curr = child
-			curr = char
-			for i in range (0, p3 + 1):
-				child = curr.get_child(c3[i3 + i])
-				if child == None:
-					a = Char(c3[i3 + i], CHARTYPE.CHAR)
-					curr.add_child(a)
-					curr = a
-				else:
-					curr = child
-			curr = char
-			for i in range (0, p4 + 1):
-				child = curr.get_child(c4[i4 + i])
-				if child == None:
-					a = Char(c4[i4 + i], CHARTYPE.CHAR)
-					curr.add_child(a)
-					curr = a
-				else:
-					curr = child
+	idxes = [0 for cand in candidates]
+	lens = [len(cand) for cand in candidates]
+	while True:
+		abort = False
+		for idx, l in zip(idxes, lens):
+			if idx >= l:
+				abort = True
+				break
+		if abort: break
+
+		m, points = find_first_common_pt([cand[idx:] for cand, idx in zip(candidates, idxes)])
+		char = Char((candidates[0][idxes[0]][0], m), CHARTYPE.CHAR) # Start point
+		if max(points) != 0:
+			for cand, idx, point in zip(candidates, idxes, points):
+				curr = char
+				for i in range (0, point + 1):
+					child = curr.get_child(cand[idx + i])
+					if child == None:
+						a = Char(cand[idx + i], CHARTYPE.CHAR)
+						curr.add_child(a)
+						curr = a
+					else:
+						curr = child
 		char_list.append(char)
-		i1 = i1 + p1 + 1
-		i2 = i2 + p2 + 1
-		i3 = i3 + p3 + 1
-		i4 = i4 + p4 + 1
+
+		for i in range(len(idxes)):
+			idxes[i] += points[i] + 1
 	return char_list
 
 '''
@@ -353,25 +337,25 @@ def argmin(items):
 '''
 
 # Truncates line image to letters and constructs line classes
-def update_line(line):
-	(c1, c2, c3, c4) = proc_line(line)
-	for i in range(len(c1)):
-		char_list = compare_pass((c1[i], c2[i], c3[i], c4[i]))
-		line.chars.extend(char_list)
-		if i != len(c1): # If not last word
-			line.chars.append(Char(None, CHARTYPE.BLANK))
+def get_char_list(line_img):
+	(letter_size, fst_c) = fst_pass(line_img)
 
-# Given a paragraph image, constructs a paragraph class
-def update_paragraph(para):
-	for line in para.lines:
-		update_line(line)	
+	p1 = proc_line(line_img, letter_size, fst_c, 0.6, 1.3, 0)
+	p2 = proc_line(line_img, letter_size, fst_c, 0.8, 1.1, 0)
+	p3 = proc_line(line_img, letter_size, fst_c, 0.7, 0.9, 0)
+	#p4 = proc_line(line_img, letter_size, fst_c, None, None, 1)
+	p5 = proc_line(line_img, letter_size*1.5, fst_c, 0.8, 1.1, 0)
+	p6 = proc_line(line_img, letter_size*2, fst_c, 0.8, 1.1, 0)
+	p7 = proc_line(line_img, letter_size*0.6, fst_c, 0.8, 1.1, 0)
+	#p8 = proc_line(line_img, letter_size*0.7, fst_c, 0.8, 1.1, 0)
+	p9 = proc_line(line_img, letter_size*0.9, fst_c, 0.8, 1.1, 0)
 
-# reconst 모듈로 넘겨줄 paragraph list를 생성
-# paragraph 하나를 input으로 받아 여러 paragraph로 분리
-def get_graphs(paragraph):
-	dl.update_paragraph(paragraph)
-	update_paragraph(paragraph)
-	return [paragraph]
+	char_list = []
+	for cp in zip(p1, p2, p3, p5, p6, p7, p9):
+		if len(char_list) > 0:
+			char_list.append(Char(None, CHARTYPE.BLANK))
+		char_list.extend(compare_pass(cp))
+	return char_list
 
 if __name__ == "__main__":
 	main()

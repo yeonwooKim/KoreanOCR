@@ -52,6 +52,9 @@ def assemble_page(graphs):
     lines = []
     for graph in graphs:
         lines.extend(graph.lines)
+    
+    if len(lines) == 0:
+        return [lines]
 
     docw = max([line.rect[2] for line in lines]) - min([line.rect[0] for line in lines])
     doch = max([line.rect[3] for line in lines]) - min([line.rect[1] for line in lines])
