@@ -1,5 +1,7 @@
 import io
 import sys
+import os
+import getopt
 import socket
 
 import matplotlib.pyplot as plt
@@ -7,7 +9,7 @@ from PIL import Image
 
 import examine
 
-def listen():
+def listen(threaded = True):
     addr = '127.0.0.1'
     port = 1255
     try:
@@ -39,7 +41,7 @@ def listen():
                     if remain <= 0: break
                 byte_f = io.BytesIO(byte_arr)
                 img = examine.pil_to_cv(Image.open(byte_f))
-                analyzed = examine.get_txt(img, verbose=True)
+                analyzed = examine.get_txt(img, verbose=True, threaded=threaded)
                 conn.send(bytearray(analyzed, encoding='utf-8'))
             except IOError as e:
                 print(e)
@@ -49,5 +51,21 @@ def listen():
 
             print("connection ended")
 
+msg_help = "--disable-thread"
+
 if __name__ == "__main__":
-    listen()
+    argv = sys.argv[1:]
+    threaded = True
+    try:
+        opts, args = getopt.gnu_getopt(argv,"h",["help", "disable-thread"])
+    except getopt.GetoptError:
+        print(msg_help)
+        sys.exit(-1)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            print(msg_help)
+            sys.exit()
+        elif opt in ("--disable-thread"):
+            threaded = False
+
+    listen(threaded)

@@ -54,8 +54,8 @@ def eval_tail(c, cand):
     if hasattr(c, "prob") and c.value is not None and len(c.value) > 0 and len(cand.value) > 0:
         if c.value == '\'':
             point += 2
-        #if cand.prob > 0.99 and check_syllable(c.value) and split_syllable_char(c.value)[1] == 'ㅏ':
-        #    point += 2
+        if cand.prob > 0.99 and check_syllable(c.value) and split_syllable_char(c.value)[1] == 'ㅏ':
+            point += 2
 
     return cand.tail + 1 - point
 

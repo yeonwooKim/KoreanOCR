@@ -31,7 +31,7 @@ def simple_preproc(img, threshold=True):
 
     return cv2.threshold(grayscale_img, 128, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
-def pre_reconst(img, verbose=False, is_simple=False):
+def pre_reconst(img, verbose=False, is_simple=False, threaded=True):
     if verbose: print_msg("preprocessing..")
     if is_simple:
         layouts = [
@@ -41,7 +41,7 @@ def pre_reconst(img, verbose=False, is_simple=False):
         layouts = preprocess_image(img)
 
     if verbose: print_msg("detecting..")
-    graphs = detection.get_graphs(layouts)
+    graphs = detection.get_graphs(layouts, threaded=threaded)
 
     if verbose: print_msg("recognizing..")
     graphs = chrecog.predict.get_pred(graphs)
@@ -50,15 +50,15 @@ def pre_reconst(img, verbose=False, is_simple=False):
     graphs = semantic.analyze(graphs)
     return graphs
 
-def get_txt(img, verbose=False, is_simple=False):
+def get_txt(img, verbose=False, is_simple=False, threaded=True):
     """이미지를 각 모듈에 순서대로 넘겨줌.
     분석된 최종 문자열을 반환"""
-    graphs = pre_reconst(img, verbose, is_simple)
+    graphs = pre_reconst(img, verbose, is_simple, threaded)
     if verbose: print_msg("reconst..")
     return reconst.build_graphs(graphs)
 
-def get_json(imgname, img, verbose=False, is_simple=False):
-    graphs = pre_reconst(img, verbose, is_simple)
+def get_json(imgname, img, verbose=False, is_simple=False, threaded=True):
+    graphs = pre_reconst(img, verbose, is_simple, threaded)
     if verbose: print_msg("reconst..")
     return reconst.build_json(imgname, graphs)
 
@@ -115,8 +115,9 @@ def main(argv):
     invert = False
     verbose = False
     is_json = False
+    threaded = True
     try:
-        opts, args = getopt.gnu_getopt(argv, "hlivj", ["help", "letter", "invert", "sp", "verbose", "json"])
+        opts, args = getopt.gnu_getopt(argv, "hlivj", ["help", "letter", "invert", "sp", "verbose", "json", "disable-thread"])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
@@ -134,6 +135,8 @@ def main(argv):
             is_json = True
         elif opt in ("--sp"):
             is_simple = True
+        elif opt in ("--disable-thread"):
+            threaded = False
 
     if len(args) != 1:
         print(msg_help)
@@ -152,9 +155,9 @@ def main(argv):
         print(get_char(img))
     elif is_json:
         imgname = os.path.basename(args[0])
-        print(get_json(imgname, img, verbose, is_simple))
+        print(get_json(imgname, img, verbose, is_simple, threaded))
     else:
-        print(get_txt(img, verbose, is_simple))
+        print(get_txt(img, verbose, is_simple, threaded))
 
 if __name__ == "__main__":
     main(sys.argv[1:])
