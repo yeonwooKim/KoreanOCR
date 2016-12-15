@@ -37,9 +37,6 @@ def view_upload():
 
     #img = cv2.imdecode(blob_array, cv2.IMREAD_COLOR) # 이미지를 디코드 후 numpy array로 변환
     analyzed = client.send(bytearray(blob))
-    #plt.figure(num=None, figsize=(3, 3), facecolor='w', edgecolor='k')
-    #plt.imshow(img, interpolation="none", cmap=plt.get_cmap("gray"))
-    #plt.show()
 
     ret = ( "name : %s\n" % f.filename +
             "size : %s\n" % sizeof_fmt(size) +

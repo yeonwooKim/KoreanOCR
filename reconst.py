@@ -4,6 +4,7 @@
 import json
 
 def build_json(imgname, graphs):
+    '''Build json object result'''
     out = dict()
     out["id"] = imgname
     labels = []
@@ -26,18 +27,21 @@ def build_json(imgname, graphs):
 
 
 def flush_line_buf(line_buf):
+    '''Flush gathered lines with sorted to x position'''
     line_buf.sort(key=lambda line: line.rect[0])
     ret = "".join([line.txt for line in line_buf])
     line_buf.clear()
     return ret
 
 def valid_line(linetext):
+    '''Does this line contain meaningful value?'''
     for c in linetext:
         if c != ' ': return True
     return False
 
 # 단순히 모든 char를 순서대로 출력
 def build_graphs(graphs):
+    '''Build grpahs according to lines, words, etc.'''
     pages = assemble_page(graphs)
     text = []
     for lines in pages:
@@ -49,10 +53,11 @@ def build_graphs(graphs):
     return output
 
 def assemble_page(graphs):
+    '''Check if the paragraph in multi-paged structure'''
     lines = []
     for graph in graphs:
         lines.extend(graph.lines)
-    
+
     if len(lines) == 0:
         return [lines]
 
@@ -69,6 +74,7 @@ def assemble_page(graphs):
     return [page0, page1]
 
 def assemble_line(lines):
+    '''Assemble characters into a complete line'''
     text = []
     for l in lines:
         linetxt = ""

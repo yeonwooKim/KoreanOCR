@@ -49,7 +49,7 @@ def eval_tail(c, cand):
     point = 0
     # Please please split the . and , symbols...!!
     if cand.value == '.' or cand.value == ',':
-        point += 30
+        point += 10
 
     if hasattr(c, "prob") and c.value is not None and len(c.value) > 0 and len(cand.value) > 0:
         if c.value == '\'':

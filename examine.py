@@ -117,7 +117,7 @@ def main(argv):
     is_json = False
     threaded = True
     try:
-        opts, args = getopt.gnu_getopt(argv, "hlivj", ["help", "letter", "invert", "sp", "verbose", "json", "disable-thread"])
+        opts, args = getopt.gnu_getopt(argv, "hlivjo:", ["help", "letter", "invert", "sp", "verbose", "json", "disable-thread"])
     except getopt.GetoptError:
         print(msg_help)
         sys.exit(2)
