@@ -30,6 +30,7 @@ def flush_line_buf(line_buf):
     '''Flush gathered lines with sorted to x position'''
     line_buf.sort(key=lambda line: line.rect[0])
     ret = "".join([line.txt for line in line_buf])
+    #print([line.rect[1] for line in line_buf])
     line_buf.clear()
     return ret
 
@@ -63,32 +64,40 @@ def assemble_page(graphs):
 
     docw = max([line.rect[2] for line in lines]) - min([line.rect[0] for line in lines])
     doch = max([line.rect[3] for line in lines]) - min([line.rect[1] for line in lines])
-    if docw < doch: return [lines]
+    rightpage_count = 0
+    for line in lines:
+        if line.rect[0] > docw / 2:
+            rightpage_count += 1
+    if docw < doch or rightpage_count < len(lines) / 3:
+        return [lines]
     print("is it a page..?")
-    xavg = sum([line.rect[0] for line in lines]) / len(lines)
     page0 = []
     page1 = []
     for line in lines:
-        if line.rect[0] < xavg: page0.append(line)
+        if line.rect[0] < docw / 2: page0.append(line)
         else: page1.append(line)
     return [page0, page1]
 
 def assemble_line(lines):
     '''Assemble characters into a complete line'''
     text = []
-    for l in lines:
+    heights = []
+    for line in lines:
         linetxt = ""
-        for c in l.chars:
+        for c in line.chars:
             linetxt += c.value
-        l.txt = linetxt
+        line.txt = linetxt
+        heights.append(line.rect[3] - line.rect[1])
         #print("[%4d %4d %4d %4d] %s" % (l.rect + (linetxt,)))
     
     lines.sort(key=lambda line: line.rect[1])
+    avg_height = sum(heights) / len(heights)
+    #print(avg_height)
 
     prev_y = None
     line_buf = []
     for l in lines:
-        if prev_y is not None and prev_y+20 < l.rect[1] + l.rect[3]:
+        if prev_y is not None and prev_y+avg_height < l.rect[1] + l.rect[3]:
             text.append(flush_line_buf(line_buf))
         line_buf.append(l)
         prev_y = l.rect[1] + l.rect[3]
