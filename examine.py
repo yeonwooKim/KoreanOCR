@@ -116,6 +116,7 @@ def main(argv):
     verbose = False
     is_json = False
     threaded = True
+    output_path = None
     try:
         opts, args = getopt.gnu_getopt(argv, "hlivjo:", ["help", "letter", "invert", "sp", "verbose", "json", "disable-thread"])
     except getopt.GetoptError:
@@ -133,6 +134,8 @@ def main(argv):
             verbose = True
         elif opt in ("-j", "--json"):
             is_json = True
+        elif opt in ("-o"):
+            output_path = arg
         elif opt in ("--sp"):
             is_simple = True
         elif opt in ("--disable-thread"):
@@ -152,12 +155,18 @@ def main(argv):
         img = 255-img
 
     if letter:
-        print(get_char(img))
+        ret_txt = get_char(img)
     elif is_json:
         imgname = os.path.basename(args[0])
-        print(get_json(imgname, img, verbose, is_simple, threaded))
+        ret_txt = get_json(imgname, img, verbose, is_simple, threaded)
     else:
-        print(get_txt(img, verbose, is_simple, threaded))
+        ret_txt = get_txt(img, verbose, is_simple, threaded)
+
+    print(ret_txt)
+    if output_path is not None:
+        f = open(output_path, 'w')
+        f.write(ret_txt)
+        f.close()
 
 if __name__ == "__main__":
     main(sys.argv[1:])
