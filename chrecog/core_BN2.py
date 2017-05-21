@@ -38,16 +38,19 @@ def batch_norm(layer, is_training, name, decay = 0.999, does_scale=True):
     layer_shape = layer.get_shape().as_list()
     depth_dim = len(layer_shape)-1
     depth = layer_shape[-1]
+    if depth_dim < 1:
+        depth_dim = 1
+        depth = 1
     if does_scale:
-        scale = tf.Variable(tf.ones(depth), name=name+"_BN_s")
+        scale = tf.get_variable(name+"_BN_s", initializer=tf.ones(depth))
     else:
         scale = None
-    beta = tf.Variable(tf.zeros(depth), name=name+"_BN_b")
-    mov_mean = tf.Variable(tf.zeros(depth), trainable=False, name=name+"_BN_pm")
-    mov_var = tf.Variable(tf.ones(depth), trainable=False, name=name+"_BN_pv")
+    beta = tf.get_variable(name+"_BN_b", initializer=tf.zeros(depth))
+    mov_mean = tf.get_variable(name+"_BN_pm", initializer=tf.zeros(depth), trainable=False)
+    mov_var = tf.get_variable(name+"_BN_pv", initializer=tf.ones(depth), trainable=False)
     
     def use_batch_with_update_mov():
-        batch_mean, batch_var = tf.nn.moments(layer,range(depth_dim))
+        batch_mean, batch_var = tf.nn.moments(layer,list(range(depth_dim)))
         train_mean = tf.assign(mov_mean,
                                mov_mean * decay + batch_mean * (1 - decay))
         train_var = tf.assign(mov_var,
@@ -104,19 +107,19 @@ is_training = tf.placeholder(tf.bool)
 X_reshape = tf.reshape(X, [-1, 32, 32, 1])
 cnn_1_5 = build_cnn_bn_relu(12, [5,5], X_reshape, is_training, "cnn_1_5")
 cnn_1_3 = build_cnn_bn_relu(36, [3,3], X_reshape, is_training, "cnn_1_3")
-cnn_1_concat = tf.concat(3, [cnn_1_5, cnn_1_3])
+cnn_1_concat = tf.concat([cnn_1_5, cnn_1_3], 3)
 cnn_1_pool = max2d_pool(cnn_1_concat) # 16 * 16 * 48
 
 cnn_2_5 = build_cnn_bn_relu(18, [5,5], cnn_1_pool, is_training, "cnn_2_5")
 cnn_2_3 = build_cnn_bn_relu(48, [3,3], cnn_1_pool, is_training, "cnn_2_3")
 cnn_2_1 = build_cnn_bn_relu(30, [1,1], cnn_1_pool, is_training, "cnn_2_1")
-cnn_2_concat = tf.concat(3, [cnn_2_5, cnn_2_3, cnn_2_1])
+cnn_2_concat = tf.concat([cnn_2_5, cnn_2_3, cnn_2_1], 3)
 cnn_2_pool = max2d_pool(cnn_2_concat) # 8 * 8 * 96
 
 cnn_3_3_reduce = build_cnn_bn_relu(32, [1,1], cnn_2_pool, is_training, "cnn_3_3_reduce")
 cnn_3_3 = build_cnn_bn_relu(48, [3,3], cnn_3_3_reduce, is_training, "cnn_3_3")
 cnn_3_1 = build_cnn_bn_relu(16, [1,1], cnn_2_pool, is_training, "cnn_3_1")
-cnn_3_concat = tf.concat(3, [cnn_3_3, cnn_3_1])
+cnn_3_concat = tf.concat([cnn_3_3, cnn_3_1], 3)
 cnn_3_pool = max2d_pool(cnn_3_concat) # 4 * 4 * 64
 
 dense_1 = build_nn_bn_relu(1024, flatten_cnn(cnn_3_pool), is_training, "dense_1")

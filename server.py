@@ -7,6 +7,8 @@ import socket
 import matplotlib.pyplot as plt
 from PIL import Image
 
+os.chdir(os.path.dirname(os.path.realpath(sys.argv[0])))
+
 import examine
 
 def listen(threaded = True):
